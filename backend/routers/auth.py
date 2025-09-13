@@ -7,8 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import os
 from database import get_db
-from models.users import User, UserRole
-from models.lookup_tables import LuRole
+from models.schemas import User, UserRole, LuRole
 from pydantic import BaseModel, EmailStr
 
 router = APIRouter()

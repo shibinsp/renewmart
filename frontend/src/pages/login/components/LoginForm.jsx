@@ -5,9 +5,11 @@ import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import Icon from '../../../components/AppIcon';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const LoginForm = () => {
   const navigate = useNavigate();
+  const { login, loading } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -15,19 +17,7 @@ const LoginForm = () => {
     rememberMe: false
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  // Mock credentials for different user roles
-  const mockCredentials = {
-    'landowner@renewmart.com': { password: 'Land2024!', role: 'landowner' },
-    'investor@renewmart.com': { password: 'Invest2024!', role: 'investor' },
-    'advisor@renewmart.com': { password: 'Advisor2024!', role: 'sales_advisor' },
-    'analyst@renewmart.com': { password: 'Analyst2024!', role: 'analyst' },
-    'manager@renewmart.com': { password: 'Manager2024!', role: 'project_manager' },
-    'governance@renewmart.com': { password: 'Gov2024!', role: 'governance_lead' },
-    'admin@renewmart.com': { password: 'Admin2024!', role: 'administrator' }
-  };
 
   const roleOptions = [
     { value: 'landowner', label: 'Landowner', description: 'Property owner seeking renewable energy opportunities' },
@@ -77,43 +67,29 @@ const LoginForm = () => {
       return;
     }
 
-    setIsLoading(true);
     setErrors({});
 
-    // Simulate API call
-    setTimeout(() => {
-      const mockUser = mockCredentials?.[formData?.email];
+    try {
+      await login({
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
+      });
       
-      if (!mockUser) {
-        setErrors({ email: 'No account found with this email address' });
-        setIsLoading(false);
-        return;
-      }
-
-      if (mockUser?.password !== formData?.password) {
-        setErrors({ password: 'Incorrect password. Please try again.' });
-        setIsLoading(false);
-        return;
-      }
-
-      if (mockUser?.role !== formData?.role) {
-        setErrors({ role: 'Selected role does not match your account permissions' });
-        setIsLoading(false);
-        return;
-      }
-
-      // Store user session
-      localStorage.setItem('user', JSON.stringify({
-        email: formData?.email,
-        role: formData?.role,
-        rememberMe: formData?.rememberMe,
-        loginTime: new Date()?.toISOString()
-      }));
-
-      // Navigate to dashboard
+      // Navigation will be handled by AuthContext after successful login
       navigate('/dashboard');
-      setIsLoading(false);
-    }, 1500);
+    } catch (error) {
+      // Handle specific error types
+      if (error.message.includes('Invalid credentials')) {
+        setErrors({ password: 'Invalid email or password' });
+      } else if (error.message.includes('role')) {
+        setErrors({ role: 'Selected role does not match your account' });
+      } else if (error.message.includes('email')) {
+        setErrors({ email: 'No account found with this email address' });
+      } else {
+        setErrors({ general: error.message || 'Login failed. Please try again.' });
+      }
+    }
   };
 
   return (
@@ -122,6 +98,17 @@ const LoginForm = () => {
         <h1 className="text-2xl font-bold text-foreground mb-2">Welcome Back</h1>
         <p className="text-muted-foreground">Sign in to your RenewMart account</p>
       </div>
+      
+      {/* General Error Display */}
+      {errors?.general && (
+        <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+          <p className="text-sm text-destructive flex items-center">
+            <Icon name="AlertCircle" size={16} className="mr-2" />
+            {errors.general}
+          </p>
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Email Input */}
         <Input
@@ -132,7 +119,7 @@ const LoginForm = () => {
           onChange={(e) => handleInputChange('email', e?.target?.value)}
           error={errors?.email}
           required
-          disabled={isLoading}
+          disabled={loading}
         />
 
         {/* Password Input */}
@@ -145,13 +132,13 @@ const LoginForm = () => {
             onChange={(e) => handleInputChange('password', e?.target?.value)}
             error={errors?.password}
             required
-            disabled={isLoading}
+            disabled={loading}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-9 text-muted-foreground hover:text-foreground transition-smooth"
-            disabled={isLoading}
+            disabled={loading}
           >
             <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={16} />
           </button>
@@ -166,7 +153,7 @@ const LoginForm = () => {
           onChange={(value) => handleInputChange('role', value)}
           error={errors?.role}
           required
-          disabled={isLoading}
+          disabled={loading}
           searchable
         />
 
@@ -175,7 +162,7 @@ const LoginForm = () => {
           label="Remember me for 30 days"
           checked={formData?.rememberMe}
           onChange={(e) => handleInputChange('rememberMe', e?.target?.checked)}
-          disabled={isLoading}
+          disabled={loading}
         />
 
         {/* Submit Button */}
@@ -184,11 +171,11 @@ const LoginForm = () => {
           variant="default"
           size="lg"
           fullWidth
-          loading={isLoading}
+          loading={loading}
           iconName="LogIn"
           iconPosition="right"
         >
-          {isLoading ? 'Signing In...' : 'Sign In'}
+          {loading ? 'Signing In...' : 'Sign In'}
         </Button>
 
         {/* Alternative Actions */}
@@ -197,7 +184,7 @@ const LoginForm = () => {
             type="button"
             onClick={() => navigate('/forgot-password')}
             className="text-primary hover:text-primary/80 font-medium transition-smooth"
-            disabled={isLoading}
+            disabled={loading}
           >
             Forgot Password?
           </button>
@@ -205,7 +192,7 @@ const LoginForm = () => {
             type="button"
             onClick={() => navigate('/registration')}
             className="text-primary hover:text-primary/80 font-medium transition-smooth"
-            disabled={isLoading}
+            disabled={loading}
           >
             Create Account
           </button>

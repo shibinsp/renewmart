@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import Header from '../../components/ui/Header';
 import Sidebar from '../../components/ui/Sidebar';
 import BreadcrumbNavigation from '../../components/ui/BreadcrumbNavigation';
@@ -10,6 +11,8 @@ import ActivitySidebar from './components/ActivitySidebar';
 import MapView from './components/MapView';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
+import { landsAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Marketplace = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -17,20 +20,48 @@ const Marketplace = () => {
   const [activitySidebarCollapsed, setActivitySidebarCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('relevance');
+  const [sortBy, setSortBy] = useState('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
-    location: [],
-    projectType: [],
-    minCapacity: '',
-    maxCapacity: '',
-    minPrice: '',
-    maxPrice: '',
-    timeline: [],
+    type: '',
+    location: '',
+    priceRange: [0, 100],
+    capacityRange: [0, 200],
+    timeline: '',
     certifications: []
   });
+  const [lands, setLands] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
+  const { user } = useAuth();
 
-  // Mock PPA data
+  useEffect(() => {
+    const fetchLands = async () => {
+      try {
+        setLoading(true);
+        const params = {
+          page: currentPage,
+          limit: 12,
+          search: searchQuery,
+          sort_by: sortBy,
+          ...filters
+        };
+        
+        const response = await landsAPI.getLands(params);
+        setLands(response.data.lands || []);
+        setTotalPages(Math.ceil((response.data.total || 0) / 12));
+      } catch (error) {
+        console.error('Failed to fetch lands:', error);
+        setLands([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLands();
+  }, [currentPage, searchQuery, sortBy, filters]);
+
+  // Mock PPA data (fallback for development)
   const mockPPAs = [
     {
       id: 1,
@@ -166,99 +197,33 @@ const Marketplace = () => {
     }
   ];
 
-  const [filteredPPAs, setFilteredPPAs] = useState(mockPPAs);
-  const totalResults = filteredPPAs?.length;
-  const totalPages = Math.ceil(totalResults / 12);
+  const totalResults = lands?.length || 0;
 
-  // Filter and search logic
-  useEffect(() => {
-    let filtered = mockPPAs;
+  // Transform lands data to match the expected PPA format for existing components
+  const transformedLands = lands.map(land => ({
+    id: land.id,
+    title: land.name || `${land.land_type} Project`,
+    type: land.land_type || 'Solar',
+    location: `${land.city || ''}, ${land.state || ''}`.trim(),
+    capacity: land.size_acres || 0,
+    price: land.lease_rate || 0,
+    timeline: land.availability_status || 'Available',
+    contractLength: '20 years', // Default value
+    image: land.image_url || 'https://images.unsplash.com/photo-1497440001374-f26997328c1b?w=400&h=300&fit=crop',
+    seller: {
+      name: land.owner_name || 'Property Owner',
+      rating: 4.5,
+      reviews: 50
+    },
+    certifications: land.certifications || [],
+    isNew: new Date(land.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    isWatchlisted: false,
+    listedDate: new Date(land.created_at).toLocaleDateString(),
+    views: Math.floor(Math.random() * 1000) + 100,
+    inquiries: Math.floor(Math.random() * 50) + 5
+  }));
 
-    // Apply search query
-    if (searchQuery?.trim()) {
-      filtered = filtered?.filter(ppa =>
-        ppa?.title?.toLowerCase()?.includes(searchQuery?.toLowerCase()) ||
-        ppa?.location?.toLowerCase()?.includes(searchQuery?.toLowerCase()) ||
-        ppa?.type?.toLowerCase()?.includes(searchQuery?.toLowerCase()) ||
-        ppa?.seller?.name?.toLowerCase()?.includes(searchQuery?.toLowerCase())
-      );
-    }
-
-    // Apply filters
-    if (filters?.location?.length > 0) {
-      filtered = filtered?.filter(ppa =>
-        filters?.location?.some(loc => 
-          ppa?.location?.toLowerCase()?.includes(loc?.toLowerCase())
-        )
-      );
-    }
-
-    if (filters?.projectType?.length > 0) {
-      filtered = filtered?.filter(ppa =>
-        filters?.projectType?.includes(ppa?.type?.toLowerCase())
-      );
-    }
-
-    if (filters?.minCapacity) {
-      filtered = filtered?.filter(ppa => ppa?.capacity >= parseInt(filters?.minCapacity));
-    }
-
-    if (filters?.maxCapacity) {
-      filtered = filtered?.filter(ppa => ppa?.capacity <= parseInt(filters?.maxCapacity));
-    }
-
-    if (filters?.minPrice) {
-      filtered = filtered?.filter(ppa => ppa?.price >= parseFloat(filters?.minPrice));
-    }
-
-    if (filters?.maxPrice) {
-      filtered = filtered?.filter(ppa => ppa?.price <= parseFloat(filters?.maxPrice));
-    }
-
-    if (filters?.timeline?.length > 0) {
-      filtered = filtered?.filter(ppa =>
-        filters?.timeline?.includes(ppa?.timeline)
-      );
-    }
-
-    if (filters?.certifications?.length > 0) {
-      filtered = filtered?.filter(ppa =>
-        filters?.certifications?.some(cert =>
-          ppa?.certifications?.some(ppaCert => 
-            ppaCert?.toLowerCase()?.includes(cert?.toLowerCase())
-          )
-        )
-      );
-    }
-
-    // Apply sorting
-    switch (sortBy) {
-      case 'price-low':
-        filtered?.sort((a, b) => a?.price - b?.price);
-        break;
-      case 'price-high':
-        filtered?.sort((a, b) => b?.price - a?.price);
-        break;
-      case 'capacity-low':
-        filtered?.sort((a, b) => a?.capacity - b?.capacity);
-        break;
-      case 'capacity-high':
-        filtered?.sort((a, b) => b?.capacity - a?.capacity);
-        break;
-      case 'rating':
-        filtered?.sort((a, b) => b?.seller?.rating - a?.seller?.rating);
-        break;
-      case 'newest':
-        filtered?.sort((a, b) => new Date(b.listedDate) - new Date(a.listedDate));
-        break;
-      default:
-        // Keep original order for relevance
-        break;
-    }
-
-    setFilteredPPAs(filtered);
-    setCurrentPage(1);
-  }, [searchQuery, filters, sortBy]);
+  const filteredPPAs = transformedLands;
 
   const handleFiltersChange = (newFilters) => {
     setFilters(newFilters);
@@ -306,7 +271,7 @@ const Marketplace = () => {
 
   // Get current page items
   const startIndex = (currentPage - 1) * 12;
-  const currentPPAs = filteredPPAs?.slice(startIndex, startIndex + 12);
+  const currentPPAs = loading ? [] : transformedLands;
 
   return (
     <div className="min-h-screen bg-background">
@@ -372,7 +337,14 @@ const Marketplace = () => {
                   />
                 ) : (
                   <>
-                    {currentPPAs?.length === 0 ? (
+                    {loading ? (
+                      <div className="flex items-center justify-center h-64">
+                        <div className="flex flex-col items-center space-y-4">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                          <p className="text-muted-foreground">Loading renewable energy projects...</p>
+                        </div>
+                      </div>
+                    ) : currentPPAs?.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-64 text-center">
                         <Icon name="Search" size={48} className="text-muted-foreground mb-4" />
                         <h3 className="text-lg font-semibold text-foreground mb-2">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import Header from '../../components/ui/Header';
 import Sidebar from '../../components/ui/Sidebar';
 import BreadcrumbNavigation from '../../components/ui/BreadcrumbNavigation';
@@ -10,6 +10,8 @@ import ProjectInsights from './components/ProjectInsights';
 import ProjectDetailModal from './components/ProjectDetailModal';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
+import { useAuth } from '../../contexts/AuthContext';
+import { landsAPI, taskAPI } from '../../services/api';
 
 const ProjectManagement = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -27,8 +29,52 @@ const ProjectManagement = () => {
     deadlineFrom: '',
     deadlineTo: ''
   });
+  const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  // Mock project data
+  useEffect(() => {
+    const fetchProjectData = async () => {
+      try {
+        setLoading(true);
+        const [landsResponse, tasksResponse] = await Promise.all([
+          landsAPI.getLands({ owner_id: user?.id }),
+          taskAPI.getTasks()
+        ]);
+        
+        // Transform lands to projects format
+        const transformedProjects = (landsResponse.data.lands || []).map(land => ({
+          id: land.id,
+          name: land.name || `${land.land_type} Project`,
+          location: `${land.city || ''}, ${land.state || ''}`.trim(),
+          capacity: `${land.size_acres || 0} acres`,
+          status: land.availability_status || 'Active',
+          progress: Math.floor(Math.random() * 100),
+          timeline: '12 months',
+          budget: { total: land.lease_rate * 1000 || 1000000, spent: Math.floor(Math.random() * 500000) },
+          nextMilestone: { title: 'Site Assessment', date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString() },
+          lastUpdated: new Date(land.updated_at || land.created_at).toLocaleDateString(),
+          team: []
+        }));
+        
+        setProjects(transformedProjects);
+        setTasks(tasksResponse.data.tasks || []);
+      } catch (error) {
+        console.error('Failed to fetch project data:', error);
+        setProjects([]);
+        setTasks([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchProjectData();
+    }
+  }, [user]);
+
+  // Mock project data (fallback)
   const mockProjects = [
     {
       id: 1,
@@ -150,21 +196,21 @@ const ProjectManagement = () => {
 
   // Filter projects based on active tab and filters
   const getFilteredProjects = () => {
-    let filtered = mockProjects;
+    let filtered = projects.length > 0 ? projects : mockProjects;
 
     // Filter by tab
     switch (activeTab) {
       case 'active':
-        filtered = filtered?.filter(p => p?.status === 'Active');
+        filtered = filtered?.filter(p => p?.status === 'Active' || p?.status === 'Available');
         break;
       case 'planning':
         filtered = filtered?.filter(p => p?.status === 'Planning');
         break;
       case 'development':
-        filtered = filtered?.filter(p => p?.status === 'In Development');
+        filtered = filtered?.filter(p => p?.status === 'In Development' || p?.status === 'Under Review');
         break;
       case 'completed':
-        filtered = filtered?.filter(p => p?.status === 'Completed');
+        filtered = filtered?.filter(p => p?.status === 'Completed' || p?.status === 'Leased');
         break;
       default:
         break;
@@ -195,11 +241,12 @@ const ProjectManagement = () => {
 
   // Calculate tab counts
   const getTabCounts = () => {
+    const dataSource = projects.length > 0 ? projects : mockProjects;
     return {
-      active: mockProjects?.filter(p => p?.status === 'Active')?.length,
-      planning: mockProjects?.filter(p => p?.status === 'Planning')?.length,
-      development: mockProjects?.filter(p => p?.status === 'In Development')?.length,
-      completed: mockProjects?.filter(p => p?.status === 'Completed')?.length
+      active: dataSource?.filter(p => p?.status === 'Active' || p?.status === 'Available')?.length,
+      planning: dataSource?.filter(p => p?.status === 'Planning')?.length,
+      development: dataSource?.filter(p => p?.status === 'In Development' || p?.status === 'Under Review')?.length,
+      completed: dataSource?.filter(p => p?.status === 'Completed' || p?.status === 'Leased')?.length
     };
   };
 
@@ -308,7 +355,12 @@ const ProjectManagement = () => {
                   </div>
 
                   {/* Projects List */}
-                  {filteredProjects?.length === 0 ? (
+                  {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      <span className="ml-3 text-muted-foreground">Loading projects...</span>
+                    </div>
+                  ) : filteredProjects?.length === 0 ? (
                     <div className="text-center py-12">
                       <Icon name="FolderOpen" size={48} className="text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-foreground mb-2">No projects found</h3>

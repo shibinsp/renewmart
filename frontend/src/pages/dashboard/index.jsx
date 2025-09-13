@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import Header from '../../components/ui/Header';
 import Sidebar from '../../components/ui/Sidebar';
 import BreadcrumbNavigation from '../../components/ui/BreadcrumbNavigation';
@@ -7,20 +7,50 @@ import MetricCard from './components/MetricCard';
 import ActivityFeed from './components/ActivityFeed';
 import ProjectChart from './components/ProjectChart';
 import QuickActions from './components/QuickActions';
-import UpcomingTasks from './components/UpcomingTasks';
 import ProjectsTable from './components/ProjectsTable';
+import { useAuth } from '../../contexts/AuthContext';
+import { usersAPI, landsAPI } from '../../services/api';
 
 const Dashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000); // Update every minute
+    }, 1000);
 
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        // Fetch user profile and dashboard metrics
+        const [profileResponse, landsResponse] = await Promise.all([
+            usersAPI.getProfile(),
+          landsAPI.getLands({ limit: 5 }) // Get recent lands for overview
+        ]);
+        
+        setDashboardData({
+          profile: profileResponse.data,
+          recentLands: landsResponse.data.lands || []
+        });
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
@@ -43,8 +73,8 @@ const Dashboard = () => {
     });
   };
 
-  // Mock user role for demonstration
-  const userRole = 'Project Manager';
+  const userRole = user?.role || 'User';
+  const userName = user?.full_name || dashboardData?.profile?.full_name || 'User';
 
   const getMetricsForRole = (role) => {
     switch (role) {
@@ -95,7 +125,7 @@ const Dashboard = () => {
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h1 className="text-3xl font-bold text-foreground mb-2">
-                    Welcome back, John! 👋
+                    Welcome back, {userName}! 👋
                   </h1>
                   <p className="text-muted-foreground">
                     {formatDate(currentTime)} • {formatTime(currentTime)}
