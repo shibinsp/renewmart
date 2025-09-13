@@ -18,7 +18,7 @@ def create_all_tables():
         
         # lu_roles table
         conn.execute(text("""
-            CREATE TABLE lu_roles (
+            CREATE TABLE IF NOT EXISTS lu_roles (
                 role_key TEXT PRIMARY KEY,
                 label TEXT NOT NULL
             )
@@ -26,7 +26,7 @@ def create_all_tables():
         
         # lu_status table
         conn.execute(text("""
-            CREATE TABLE lu_status (
+            CREATE TABLE IF NOT EXISTS lu_status (
                 status_key TEXT PRIMARY KEY,
                 scope TEXT NOT NULL
             )
@@ -34,14 +34,14 @@ def create_all_tables():
         
         # lu_task_status table
         conn.execute(text("""
-            CREATE TABLE lu_task_status (
+            CREATE TABLE IF NOT EXISTS lu_task_status (
                 status_key TEXT PRIMARY KEY
             )
         """))
         
         # lu_energy_type table
         conn.execute(text("""
-            CREATE TABLE lu_energy_type (
+            CREATE TABLE IF NOT EXISTS lu_energy_type (
                 energy_key TEXT PRIMARY KEY
             )
         """))
@@ -51,7 +51,7 @@ def create_all_tables():
         
         # users table (quoted because 'user' is reserved keyword)
         conn.execute(text("""
-            CREATE TABLE "user" (
+            CREATE TABLE IF NOT EXISTS "user" (
                 user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
@@ -66,7 +66,7 @@ def create_all_tables():
         
         # user_roles table
         conn.execute(text("""
-            CREATE TABLE user_roles (
+            CREATE TABLE IF NOT EXISTS user_roles (
                 user_id UUID REFERENCES "user"(user_id) ON DELETE CASCADE,
                 role_key TEXT REFERENCES lu_roles(role_key),
                 assigned_at TIMESTAMPTZ DEFAULT now(),
@@ -78,7 +78,7 @@ def create_all_tables():
         print("Creating section definitions...")
         
         conn.execute(text("""
-            CREATE TABLE section_definitions (
+            CREATE TABLE IF NOT EXISTS section_definitions (
                 section_key TEXT PRIMARY KEY,
                 label TEXT NOT NULL,
                 default_role_reviewer TEXT REFERENCES lu_roles(role_key)
@@ -90,7 +90,7 @@ def create_all_tables():
         
         # lands table
         conn.execute(text("""
-            CREATE TABLE lands (
+            CREATE TABLE IF NOT EXISTS lands (
                 land_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 landowner_id UUID NOT NULL REFERENCES "user"(user_id),
                 title TEXT NOT NULL,
@@ -115,7 +115,7 @@ def create_all_tables():
         
         # land_sections table
         conn.execute(text("""
-            CREATE TABLE land_sections (
+            CREATE TABLE IF NOT EXISTS land_sections (
                 land_section_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 land_id UUID NOT NULL REFERENCES lands(land_id) ON DELETE CASCADE,
                 section_key TEXT NOT NULL REFERENCES section_definitions(section_key),
@@ -135,7 +135,7 @@ def create_all_tables():
         
         # documents table
         conn.execute(text("""
-            CREATE TABLE documents (
+            CREATE TABLE IF NOT EXISTS documents (
                 document_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 land_id UUID REFERENCES lands(land_id) ON DELETE CASCADE,
                 land_section_id UUID REFERENCES land_sections(land_section_id) ON DELETE CASCADE,
@@ -155,7 +155,7 @@ def create_all_tables():
         
         # tasks table
         conn.execute(text("""
-            CREATE TABLE tasks (
+            CREATE TABLE IF NOT EXISTS tasks (
                 task_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 land_id UUID NOT NULL REFERENCES lands(land_id) ON DELETE CASCADE,
                 land_section_id UUID REFERENCES land_sections(land_section_id) ON DELETE SET NULL,
@@ -175,7 +175,7 @@ def create_all_tables():
         
         # task_history table
         conn.execute(text("""
-            CREATE TABLE task_history (
+            CREATE TABLE IF NOT EXISTS task_history (
                 history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 task_id UUID NOT NULL REFERENCES tasks(task_id) ON DELETE CASCADE,
                 changed_by UUID REFERENCES "user"(user_id),
@@ -191,7 +191,7 @@ def create_all_tables():
         print("Creating investor interests table...")
         
         conn.execute(text("""
-            CREATE TABLE investor_interests (
+            CREATE TABLE IF NOT EXISTS investor_interests (
                 interest_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 investor_id UUID NOT NULL REFERENCES "user"(user_id),
                 land_id UUID NOT NULL REFERENCES lands(land_id) ON DELETE CASCADE,
@@ -206,27 +206,31 @@ def create_all_tables():
         print("Creating indexes...")
         
         indexes = [
-            'CREATE INDEX idx_lands_owner ON lands(landowner_id)',
-            'CREATE INDEX idx_lands_status ON lands(status)',
-            'CREATE INDEX idx_lands_published ON lands(published_at) WHERE published_at IS NOT NULL',
-            'CREATE INDEX idx_lands_energy ON lands(energy_key)',
-            'CREATE INDEX idx_land_sections_land ON land_sections(land_id)',
-            'CREATE INDEX idx_land_sections_status ON land_sections(status)',
-            'CREATE INDEX idx_sections_assignee ON land_sections(assigned_user)',
-            'CREATE INDEX idx_sections_role ON land_sections(assigned_role)',
-            'CREATE INDEX idx_docs_land ON documents(land_id)',
-            'CREATE INDEX idx_docs_section ON documents(land_section_id)',
-            'CREATE INDEX idx_docs_uploader ON documents(uploaded_by)',
-            'CREATE INDEX idx_tasks_land ON tasks(land_id)',
-            'CREATE INDEX idx_tasks_assigned_to ON tasks(assigned_to)',
-            'CREATE INDEX idx_tasks_status ON tasks(status)',
-            'CREATE INDEX idx_task_history_task ON task_history(task_id)',
-            'CREATE INDEX idx_task_history_period ON task_history(start_ts, end_ts)',
-            'CREATE INDEX idx_interest_land ON investor_interests(land_id)'
+            'CREATE INDEX IF NOT EXISTS idx_lands_owner ON lands(landowner_id)',
+            'CREATE INDEX IF NOT EXISTS idx_lands_status ON lands(status)',
+            'CREATE INDEX IF NOT EXISTS idx_lands_published ON lands(published_at) WHERE published_at IS NOT NULL',
+            'CREATE INDEX IF NOT EXISTS idx_lands_energy ON lands(energy_key)',
+            'CREATE INDEX IF NOT EXISTS idx_land_sections_land ON land_sections(land_id)',
+            'CREATE INDEX IF NOT EXISTS idx_land_sections_status ON land_sections(status)',
+            'CREATE INDEX IF NOT EXISTS idx_sections_assignee ON land_sections(assigned_user)',
+            'CREATE INDEX IF NOT EXISTS idx_sections_role ON land_sections(assigned_role)',
+            'CREATE INDEX IF NOT EXISTS idx_docs_land ON documents(land_id)',
+            'CREATE INDEX IF NOT EXISTS idx_docs_section ON documents(land_section_id)',
+            'CREATE INDEX IF NOT EXISTS idx_docs_uploader ON documents(uploaded_by)',
+            'CREATE INDEX IF NOT EXISTS idx_tasks_land ON tasks(land_id)',
+            'CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to)',
+            'CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)',
+            'CREATE INDEX IF NOT EXISTS idx_task_history_task ON task_history(task_id)',
+            'CREATE INDEX IF NOT EXISTS idx_task_history_period ON task_history(start_ts, end_ts)',
+            'CREATE INDEX IF NOT EXISTS idx_interest_land ON investor_interests(land_id)'
         ]
         
         for index_sql in indexes:
-            conn.execute(text(index_sql))
+            try:
+                conn.execute(text(index_sql))
+            except Exception as e:
+                print(f"Index creation warning: {e}")
+                continue
         
         # Create Triggers and Functions
         print("Creating triggers and functions...")
@@ -244,10 +248,15 @@ def create_all_tables():
         # Create triggers for updated_at
         trigger_tables = ['lands', 'land_sections', 'tasks']
         for table in trigger_tables:
-            conn.execute(text(f"""
-                CREATE TRIGGER trg_touch_{table} BEFORE UPDATE ON {table}
-                FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at()
-            """))
+            try:
+                conn.execute(text(f"""
+                    DROP TRIGGER IF EXISTS trg_touch_{table} ON {table};
+                    CREATE TRIGGER trg_touch_{table} BEFORE UPDATE ON {table}
+                    FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at()
+                """))
+            except Exception as e:
+                print(f"Trigger creation warning for {table}: {e}")
+                continue
         
         # Task creation guard function
         conn.execute(text("""
@@ -263,11 +272,15 @@ def create_all_tables():
             END; $$ LANGUAGE plpgsql
         """))
         
-        conn.execute(text("""
-            CREATE TRIGGER trg_tasks_after_submit
-            BEFORE INSERT ON tasks
-            FOR EACH ROW EXECUTE FUNCTION check_tasks_only_after_submit()
-        """))
+        try:
+            conn.execute(text("""
+                DROP TRIGGER IF EXISTS trg_tasks_after_submit ON tasks;
+                CREATE TRIGGER trg_tasks_after_submit
+                BEFORE INSERT ON tasks
+                FOR EACH ROW EXECUTE FUNCTION check_tasks_only_after_submit()
+            """))
+        except Exception as e:
+            print(f"Task trigger creation warning: {e}")
         
         # Task history logging function
         conn.execute(text("""
@@ -290,15 +303,23 @@ def create_all_tables():
             END; $$ LANGUAGE plpgsql
         """))
         
-        conn.execute(text("""
-            CREATE TRIGGER trg_task_history_insert
-            AFTER INSERT ON tasks FOR EACH ROW EXECUTE FUNCTION log_task_history()
-        """))
+        try:
+            conn.execute(text("""
+                DROP TRIGGER IF EXISTS trg_task_history_insert ON tasks;
+                CREATE TRIGGER trg_task_history_insert
+                AFTER INSERT ON tasks FOR EACH ROW EXECUTE FUNCTION log_task_history()
+            """))
+        except Exception as e:
+            print(f"Task history insert trigger warning: {e}")
         
-        conn.execute(text("""
-            CREATE TRIGGER trg_task_history_update
-            AFTER UPDATE OF status ON tasks FOR EACH ROW EXECUTE FUNCTION log_task_history()
-        """))
+        try:
+            conn.execute(text("""
+                DROP TRIGGER IF EXISTS trg_task_history_update ON tasks;
+                CREATE TRIGGER trg_task_history_update
+                AFTER UPDATE OF status ON tasks FOR EACH ROW EXECUTE FUNCTION log_task_history()
+            """))
+        except Exception as e:
+            print(f"Task history update trigger warning: {e}")
         
         # Insert seed data
         print("Inserting seed data...")
