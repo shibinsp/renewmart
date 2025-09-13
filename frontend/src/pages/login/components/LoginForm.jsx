@@ -22,10 +22,10 @@ const LoginForm = () => {
   const roleOptions = [
     { value: 'landowner', label: 'Landowner', description: 'Property owner seeking renewable energy opportunities' },
     { value: 'investor', label: 'Investor', description: 'Investment professional focused on renewable energy assets' },
-    { value: 'sales_advisor', label: 'RE Sales Advisor', description: 'Sales professional managing client relationships' },
-    { value: 'analyst', label: 'RE Analyst', description: 'Technical and financial analysis specialist' },
+    { value: 're_sales_advisor', label: 'RE Sales Advisor', description: 'Sales professional managing client relationships' },
+    { value: 're_analyst', label: 'RE Analyst', description: 'Technical and financial analysis specialist' },
     { value: 'project_manager', label: 'Project Manager', description: 'Operations professional overseeing project development' },
-    { value: 'governance_lead', label: 'RE Governance Lead', description: 'Compliance and regulatory specialist' },
+    { value: 're_governance_lead', label: 'RE Governance Lead', description: 'Compliance and regulatory specialist' },
     { value: 'administrator', label: 'Administrator', description: 'System administrator managing platform operations' }
   ];
 
@@ -200,15 +200,127 @@ const LoginForm = () => {
       </form>
       {/* Demo Credentials Info */}
       <div className="mt-8 p-4 bg-muted rounded-lg">
-        <h3 className="text-sm font-medium text-foreground mb-2 flex items-center">
+        <h3 className="text-sm font-medium text-foreground mb-3 flex items-center">
           <Icon name="Info" size={14} className="mr-2" />
-          Demo Credentials
+          Demo Credentials - Click to Auto-Fill
         </h3>
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p><strong>Landowner:</strong> landowner@renewmart.com / Land2024!</p>
-          <p><strong>Investor:</strong> investor@renewmart.com / Invest2024!</p>
-          <p><strong>Administrator:</strong> admin@renewmart.com / Admin2024!</p>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                email: 'landowner@renewmart.com',
+                password: 'Land2024!',
+                role: 'landowner',
+                rememberMe: false
+              });
+              setErrors({});
+            }}
+            className="w-full text-left p-2 rounded border border-border hover:bg-accent hover:text-accent-foreground transition-colors text-xs"
+            disabled={loading}
+          >
+            <strong className="text-green-600">Landowner:</strong> landowner@renewmart.com / Land2024!
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                email: 'investor@renewmart.com',
+                password: 'Invest2024!',
+                role: 'investor',
+                rememberMe: false
+              });
+              setErrors({});
+            }}
+            className="w-full text-left p-2 rounded border border-border hover:bg-accent hover:text-accent-foreground transition-colors text-xs"
+            disabled={loading}
+          >
+            <strong className="text-blue-600">Investor:</strong> investor@renewmart.com / Invest2024!
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                email: 'admin@renewmart.com',
+                password: 'Admin2024!',
+                role: 'administrator',
+                rememberMe: false
+              });
+              setErrors({});
+            }}
+            className="w-full text-left p-2 rounded border border-border hover:bg-accent hover:text-accent-foreground transition-colors text-xs"
+            disabled={loading}
+          >
+            <strong className="text-purple-600">Administrator:</strong> admin@renewmart.com / Admin2024!
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                email: 'sales@renewmart.com',
+                password: 'Sales2024!',
+                role: 're_sales_advisor',
+                rememberMe: false
+              });
+              setErrors({});
+            }}
+            className="w-full text-left p-2 rounded border border-border hover:bg-accent hover:text-accent-foreground transition-colors text-xs"
+            disabled={loading}
+          >
+            <strong className="text-orange-600">RE Sales Advisor:</strong> sales@renewmart.com / Sales2024!
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                email: 'analyst@renewmart.com',
+                password: 'Analyst2024!',
+                role: 're_analyst',
+                rememberMe: false
+              });
+              setErrors({});
+            }}
+            className="w-full text-left p-2 rounded border border-border hover:bg-accent hover:text-accent-foreground transition-colors text-xs"
+            disabled={loading}
+          >
+            <strong className="text-cyan-600">RE Analyst:</strong> analyst@renewmart.com / Analyst2024!
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                email: 'manager@renewmart.com',
+                password: 'Manager2024!',
+                role: 'project_manager',
+                rememberMe: false
+              });
+              setErrors({});
+            }}
+            className="w-full text-left p-2 rounded border border-border hover:bg-accent hover:text-accent-foreground transition-colors text-xs"
+            disabled={loading}
+          >
+            <strong className="text-indigo-600">Project Manager:</strong> manager@renewmart.com / Manager2024!
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                email: 'governance@renewmart.com',
+                password: 'Gov2024!',
+                role: 're_governance_lead',
+                rememberMe: false
+              });
+              setErrors({});
+            }}
+            className="w-full text-left p-2 rounded border border-border hover:bg-accent hover:text-accent-foreground transition-colors text-xs"
+            disabled={loading}
+          >
+            <strong className="text-red-600">RE Governance Lead:</strong> governance@renewmart.com / Gov2024!
+          </button>
         </div>
+        <p className="text-xs text-muted-foreground mt-2 italic">
+          Click any credential above to automatically fill the login form
+        </p>
       </div>
     </div>
   );

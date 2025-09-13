@@ -21,7 +21,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user."""
     # Check if user already exists
-    check_query = text("SELECT user_id FROM users WHERE email = :email")
+    check_query = text("SELECT user_id FROM \"user\" WHERE email = :email")
     existing_user = db.execute(check_query, {"email": user_data.email}).fetchone()
     
     if existing_user:
@@ -35,7 +35,7 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
     
     # Create user
     insert_query = text("""
-        INSERT INTO users (email, password_hash, first_name, last_name, phone, is_active)
+        INSERT INTO \"user\" (email, password_hash, first_name, last_name, phone, is_active)
         VALUES (:email, :password_hash, :first_name, :last_name, :phone, :is_active)
         RETURNING user_id, email, first_name, last_name, phone, is_active, created_at, updated_at
     """)
@@ -109,7 +109,7 @@ async def update_current_user_profile(
     
     if user_update.email is not None:
         # Check if email is already taken by another user
-        check_query = text("SELECT user_id FROM users WHERE email = :email AND user_id != :user_id")
+        check_query = text("SELECT user_id FROM \"user\" WHERE email = :email AND user_id != :user_id")
         existing = db.execute(check_query, {"email": user_update.email, "user_id": str(current_user["user_id"])}).fetchone()
         if existing:
             raise HTTPException(
@@ -142,7 +142,7 @@ async def update_current_user_profile(
         )
     
     update_query = text(f"""
-        UPDATE users 
+        UPDATE \"user\" 
         SET {', '.join(update_fields)}, updated_at = now()
         WHERE user_id = :user_id
         RETURNING user_id, email, first_name, last_name, phone, is_active, created_at, updated_at
@@ -172,7 +172,7 @@ async def list_users(
     """List all users (admin only)."""
     query = text("""
         SELECT user_id, email, first_name, last_name, phone, is_active, created_at, updated_at
-        FROM users
+        FROM \"user\"
         ORDER BY created_at DESC
         OFFSET :skip LIMIT :limit
     """)
@@ -202,7 +202,7 @@ async def get_user(
     """Get user by ID (admin only)."""
     query = text("""
         SELECT user_id, email, first_name, last_name, phone, is_active, created_at, updated_at
-        FROM users
+        FROM \"user\"
         WHERE user_id = :user_id
     """)
     
@@ -234,7 +234,7 @@ async def assign_user_role(
 ):
     """Assign a role to a user (admin only)."""
     # Check if user exists
-    user_check = text("SELECT user_id FROM users WHERE user_id = :user_id")
+    user_check = text("SELECT user_id FROM \"user\" WHERE user_id = :user_id")
     if not db.execute(user_check, {"user_id": str(user_id)}).fetchone():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

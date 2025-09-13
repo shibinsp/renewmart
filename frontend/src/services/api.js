@@ -43,12 +43,22 @@ api.interceptors.response.use(
 // Authentication API
 export const authAPI = {
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
+    const response = await api.post('/api/users/login', credentials);
     return response.data;
   },
   
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
+    // Transform frontend form data to backend format
+    const registrationData = {
+      email: userData.email,
+      password: userData.password,
+      first_name: userData.firstName,
+      last_name: userData.lastName,
+      phone: userData.phone || null,
+      roles: userData.role ? [userData.role] : []
+    };
+    
+    const response = await api.post('/api/auth/register', registrationData);
     return response.data;
   },
   

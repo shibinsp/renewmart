@@ -61,13 +61,13 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[dict]:
     """Authenticate a user with email and password."""
     # Get user with roles
     query = text("""
-        SELECT u.user_id, u.email, u.password_hash, u.first_name, u.last_name, 
+        SELECT u.user_id, u.email, u.password_hash, u.first_name, u.last_name,
                u.phone, u.is_active, u.created_at, u.updated_at,
                COALESCE(array_agg(ur.role_key) FILTER (WHERE ur.role_key IS NOT NULL), '{}') as roles
-        FROM users u
+        FROM "user" u
         LEFT JOIN user_roles ur ON u.user_id = ur.user_id
         WHERE u.email = :email AND u.is_active = true
-        GROUP BY u.user_id, u.email, u.password_hash, u.first_name, u.last_name, 
+        GROUP BY u.user_id, u.email, u.password_hash, u.first_name, u.last_name,
                  u.phone, u.is_active, u.created_at, u.updated_at
     """)
     
@@ -108,7 +108,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         SELECT u.user_id, u.email, u.first_name, u.last_name, u.phone, u.is_active,
                u.created_at, u.updated_at,
                COALESCE(array_agg(ur.role_key) FILTER (WHERE ur.role_key IS NOT NULL), '{}') as roles
-        FROM users u
+        FROM "user" u
         LEFT JOIN user_roles ur ON u.user_id = ur.user_id
         WHERE u.user_id = :user_id AND u.is_active = true
         GROUP BY u.user_id, u.email, u.first_name, u.last_name, u.phone, u.is_active,

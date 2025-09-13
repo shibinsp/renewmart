@@ -77,12 +77,12 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 # Include routers with proper prefixes
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
-app.include_router(users.router, prefix="/api/users", tags=["users"])
-app.include_router(lands.router, prefix="/api/lands", tags=["lands"])
+app.include_router(users.router, prefix="/api", tags=["users"])  # users router already has /users prefix
+app.include_router(lands.router, prefix="/api", tags=["lands"])  # lands router already has /lands prefix
 app.include_router(sections.router, prefix="/api/sections", tags=["sections"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(investors.router, prefix="/api", tags=["investors"])  # investors router already has /investors prefix
-app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
+app.include_router(documents.router, prefix="/api", tags=["documents"])  # documents router already has /documents prefix
 
 @app.get("/")
 async def root():

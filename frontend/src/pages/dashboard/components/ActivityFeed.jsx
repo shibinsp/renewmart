@@ -1,8 +1,93 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
+import Button from '../../../components/ui/Button';
+import { dummyActivities, getActivitiesByUser } from '../../../data/dummyData';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const ActivityFeed = () => {
-  const activities = [
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Load activities using dummy data
+    const loadActivities = () => {
+      setTimeout(() => {
+        // Get user-specific activities or show all activities
+        let userActivities = dummyActivities;
+        
+        // If user has specific roles, filter activities accordingly
+        if (user?.roles?.includes('landowner')) {
+          userActivities = dummyActivities.filter(activity => 
+            activity.type === 'land_listing' || 
+            activity.type === 'document_upload' ||
+            activity.userId === user.id
+          );
+        } else if (user?.roles?.includes('investor')) {
+          userActivities = dummyActivities.filter(activity => 
+            activity.type === 'investment' || 
+            activity.type === 'project_update' ||
+            activity.userId === user.id
+          );
+        }
+        
+        // Format activities for display
+        const formattedActivities = userActivities.map(activity => {
+          const timeAgo = getTimeAgo(activity.timestamp);
+          return {
+            id: activity.id,
+            type: activity.type,
+            title: activity.title,
+            description: activity.description,
+            timestamp: timeAgo,
+            user: activity.user?.name || 'System',
+            avatar: activity.user?.avatar || null,
+            status: getActivityStatus(activity.type)
+          };
+        });
+        
+        setActivities(formattedActivities);
+        setLoading(false);
+      }, 1000);
+    };
+
+    loadActivities();
+  }, [user]);
+  
+  // Helper function to calculate time ago
+  const getTimeAgo = (timestamp) => {
+    const now = new Date();
+    const activityTime = new Date(timestamp);
+    const diffInHours = Math.floor((now - activityTime) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays === 1) return '1 day ago';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    
+    return activityTime.toLocaleDateString();
+  };
+  
+  // Helper function to get activity status
+  const getActivityStatus = (type) => {
+    switch (type) {
+      case 'project_update':
+      case 'task_completion':
+      case 'document_upload':
+        return 'success';
+      case 'investment':
+      case 'land_listing':
+        return 'info';
+      case 'system_alert':
+        return 'warning';
+      default:
+        return 'info';
+    }
+  };
+
+  const oldActivities = [
     {
       id: 1,
       type: 'project',

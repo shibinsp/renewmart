@@ -26,32 +26,73 @@ async def create_land(
     # Use stored procedure to create draft land
     query = text("""
         SELECT sp_land_create_draft(
-            :owner_id, :title, :description, :location, :total_area, 
-            :price_per_sqft, :total_price, :coordinates
+            :owner_id, :title, :location_text, :coordinates, :area_acres
         ) as land_id
     """)
     
     result = db.execute(query, {
         "owner_id": current_user["user_id"],
         "title": land_data.title,
-        "description": land_data.description,
-        "location": land_data.location,
-        "total_area": float(land_data.total_area),
-        "price_per_sqft": float(land_data.price_per_sqft),
-        "total_price": float(land_data.total_price),
-        "coordinates": land_data.coordinates
+        "location_text": land_data.location_text,
+        "coordinates": land_data.coordinates,
+        "area_acres": float(land_data.area_acres) if land_data.area_acres else None
     }).fetchone()
     
-    db.commit()
-    
     if not result or not result.land_id:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create land"
         )
     
+    # Update additional fields that are not handled by the stored procedure
+    land_id = result.land_id
+    update_fields = []
+    params = {"land_id": str(land_id)}
+    
+    if land_data.land_type:
+        update_fields.append("land_type = :land_type")
+        params["land_type"] = land_data.land_type
+    
+    if land_data.energy_key:
+        update_fields.append("energy_key = :energy_key")
+        params["energy_key"] = land_data.energy_key
+    
+    if land_data.capacity_mw:
+        update_fields.append("capacity_mw = :capacity_mw")
+        params["capacity_mw"] = float(land_data.capacity_mw)
+    
+    if land_data.price_per_mwh:
+        update_fields.append("price_per_mwh = :price_per_mwh")
+        params["price_per_mwh"] = float(land_data.price_per_mwh)
+    
+    if land_data.timeline_text:
+        update_fields.append("timeline_text = :timeline_text")
+        params["timeline_text"] = land_data.timeline_text
+    
+    if land_data.contract_term_years:
+        update_fields.append("contract_term_years = :contract_term_years")
+        params["contract_term_years"] = land_data.contract_term_years
+    
+    if land_data.developer_name:
+        update_fields.append("developer_name = :developer_name")
+        params["developer_name"] = land_data.developer_name
+    
+    if land_data.admin_notes:
+        update_fields.append("admin_notes = :admin_notes")
+        params["admin_notes"] = land_data.admin_notes
+    
+    if update_fields:
+        update_query = text(f"""
+            UPDATE lands SET {', '.join(update_fields)}, updated_at = CURRENT_TIMESTAMP
+            WHERE land_id = :land_id
+        """)
+        db.execute(update_query, params)
+    
+    db.commit()
+    
     # Fetch the created land
-    return await get_land(result.land_id, current_user, db)
+    return await get_land(land_id, current_user, db)
 
 @router.get("/", response_model=List[LandResponse])
 async def list_lands(

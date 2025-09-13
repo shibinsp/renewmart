@@ -6,7 +6,7 @@ import NotFound from "pages/NotFound";
 import ProjectManagement from './pages/project-management';
 import Registration from './pages/registration';
 import LoginPage from './pages/login';
-import Marketplace from './pages/marketplace';
+import Marketplace from './pages/Marketplace';
 import Dashboard from './pages/dashboard';
 import DocumentManagement from './pages/document-management';
 import ProtectedRoute, { PublicRoute, OwnerRoute, ReviewerRoute } from './components/ProtectedRoute';

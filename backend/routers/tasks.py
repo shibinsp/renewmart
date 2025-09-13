@@ -83,7 +83,7 @@ async def create_task(
     
     # Validate assigned_to user if provided
     if task_data.assigned_to:
-        user_check = text("SELECT user_id FROM users WHERE user_id = :user_id")
+        user_check = text("SELECT user_id FROM \"user\" WHERE user_id = :user_id")
         user_result = db.execute(user_check, {"user_id": str(task_data.assigned_to)}).fetchone()
         
         if not user_result:

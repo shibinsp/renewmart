@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem('authToken');
         const userData = localStorage.getItem('user');
 
-        if (token && userData) {
+        if (token && userData && userData !== 'undefined') {
           const user = JSON.parse(userData);
           
           // Verify token is still valid
@@ -152,19 +152,27 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: AUTH_ACTIONS.LOGIN_START });
       
-      const response = await authAPI.register(userData);
-      const { access_token, user } = response;
+      const user = await authAPI.register(userData);
+      
+      // Registration successful, but user needs to login
+      // For demo purposes, we'll auto-login after registration
+      const loginResponse = await authAPI.login({
+        username: userData.email,
+        password: userData.password
+      });
+      
+      const { access_token, user: loggedInUser } = loginResponse;
 
       // Store in localStorage
       localStorage.setItem('authToken', access_token);
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(loggedInUser));
 
       dispatch({
         type: AUTH_ACTIONS.LOGIN_SUCCESS,
-        payload: { user, token: access_token },
+        payload: { user: loggedInUser, token: access_token },
       });
 
-      return { success: true, user };
+      return { success: true, user: loggedInUser };
     } catch (error) {
       const errorMessage = error.response?.data?.detail || 'Registration failed';
       dispatch({
