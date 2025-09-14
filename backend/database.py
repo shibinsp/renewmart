@@ -11,7 +11,7 @@ load_dotenv()
 # Database configuration
 DB_NAME = os.getenv("DB_NAME", "renew")
 DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "shibin")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "sai")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 

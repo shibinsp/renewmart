@@ -13,11 +13,11 @@ const LoadingSpinner = () => (
 );
 
 // Protected Route Component
-const ProtectedRoute = ({ 
-  children, 
-  requiredRoles = [], 
+const ProtectedRoute = ({
+  children,
+  requiredRoles = [],
   redirectTo = '/login',
-  fallback = null 
+  fallback = null
 }) => {
   const { isAuthenticated, isLoading, user, hasAnyRole } = useAuth();
   const location = useLocation();
@@ -30,10 +30,10 @@ const ProtectedRoute = ({
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return (
-      <Navigate 
-        to={redirectTo} 
-        state={{ from: location.pathname }} 
-        replace 
+      <Navigate
+        to={redirectTo}
+        state={{ from: location.pathname }}
+        replace
       />
     );
   }
@@ -44,7 +44,7 @@ const ProtectedRoute = ({
     if (fallback) {
       return fallback;
     }
-    
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
@@ -62,7 +62,7 @@ const ProtectedRoute = ({
               </span>
             )}
           </p>
-          <button 
+          <button
             onClick={() => window.history.back()}
             className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
           >
@@ -94,13 +94,37 @@ export const AdminRoute = ({ children, ...props }) => (
 );
 
 export const ReviewerRoute = ({ children, ...props }) => (
-  <ProtectedRoute requiredRoles={['reviewer', 'administrator']} {...props}>
+  <ProtectedRoute requiredRoles={['re_governance_lead', 're_analyst', 'administrator']} {...props}>
     {children}
   </ProtectedRoute>
 );
 
 export const OwnerRoute = ({ children, ...props }) => (
-  <ProtectedRoute requiredRoles={['owner', 'administrator']} {...props}>
+  <ProtectedRoute requiredRoles={['landowner', 'administrator']} {...props}>
+    {children}
+  </ProtectedRoute>
+);
+
+export const InvestorRoute = ({ children, ...props }) => (
+  <ProtectedRoute requiredRoles={['investor', 'administrator']} {...props}>
+    {children}
+  </ProtectedRoute>
+);
+
+export const SalesRoute = ({ children, ...props }) => (
+  <ProtectedRoute requiredRoles={['re_sales_advisor', 'administrator']} {...props}>
+    {children}
+  </ProtectedRoute>
+);
+
+export const AnalystRoute = ({ children, ...props }) => (
+  <ProtectedRoute requiredRoles={['re_analyst', 'administrator']} {...props}>
+    {children}
+  </ProtectedRoute>
+);
+
+export const ProjectManagerRoute = ({ children, ...props }) => (
+  <ProtectedRoute requiredRoles={['project_manager', 'administrator']} {...props}>
     {children}
   </ProtectedRoute>
 );

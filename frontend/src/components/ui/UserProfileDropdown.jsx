@@ -1,15 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import Icon from '../AppIcon';
 
 const UserProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const userInfo = {
-    name: 'John Doe',
-    email: 'john.doe@renewmart.com',
-    role: 'Project Manager',
+    name: user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : 'User',
+    email: user?.email || 'user@renewmart.com',
+    role: user?.roles?.[0]?.replace('re_', '').replace('_', ' ') || 'User',
     avatar: null
   };
 
@@ -38,11 +41,13 @@ const UserProfileDropdown = () => {
 
   const handleItemClick = (item) => {
     if (item?.action === 'logout') {
-      // Handle logout logic
-      console.log('Logging out...');
+      logout();
+      navigate('/login');
     } else if (item?.action === 'shortcuts') {
       // Handle shortcuts modal
       console.log('Opening shortcuts...');
+    } else if (item?.path) {
+      navigate(item.path);
     }
     setIsOpen(false);
   };
@@ -65,9 +70,9 @@ const UserProfileDropdown = () => {
           <div className="text-sm font-medium text-foreground">{userInfo?.name}</div>
           <div className="text-xs text-muted-foreground">{userInfo?.role}</div>
         </div>
-        <Icon 
-          name="ChevronDown" 
-          size={16} 
+        <Icon
+          name="ChevronDown"
+          size={16}
           className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
@@ -96,21 +101,20 @@ const UserProfileDropdown = () => {
               }
 
               const ItemComponent = item?.path ? Link : 'button';
-              const itemProps = item?.path 
-                ? { to: item?.path } 
+              const itemProps = item?.path
+                ? { to: item?.path }
                 : { onClick: () => handleItemClick(item) };
 
               return (
                 <ItemComponent
                   key={index}
                   {...itemProps}
-                  className={`w-full flex items-center space-x-3 px-4 py-2 text-sm font-medium transition-smooth ${
-                    item?.variant === 'destructive' ?'text-error hover:bg-error/10' :'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                  className={`w-full flex items-center space-x-3 px-4 py-2 text-sm font-medium transition-smooth ${item?.variant === 'destructive' ? 'text-error hover:bg-error/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
                 >
-                  <Icon 
-                    name={item?.icon} 
-                    size={16} 
+                  <Icon
+                    name={item?.icon}
+                    size={16}
                     className={item?.variant === 'destructive' ? 'text-error' : 'text-current'}
                   />
                   <span>{item?.label}</span>
