@@ -1,0 +1,99 @@
+{
+  "SiteRegistrationFlow": {
+    "Landowner": {
+      "Actions": [
+        "Fill out site registration form with land details",
+        "Submit form to Admin"
+      ],
+      "Access": [
+        "Login to see project status"
+      ]
+    },
+    "Admin": {
+      "Responsibilities": [
+        "Receive site registration form",
+        "Verify and approve form",
+        "Assign tasks to roles (Investor, RE Sales Advisor, RE Analyst, RE Governance Lead, Project Manager)",
+        "Send forms with multiple tasks to roles",
+        "View all forms and statuses in admin panel",
+        "Raise tickets to roles if needed",
+        "Approve project tasks (even partially, depending on dependencies)",
+        "Approve investor registrations before login access",
+        "Approve project to 'Ready to Build' state"
+      ],
+      "SpecialNotes": [
+        "Admin can approve forms without all tasks completed if some depend on Investor",
+        "Final approval sends project to Ready to Build (RTB) and assigns to Project Manager"
+      ]
+    },
+    "Roles": {
+      "Investor": {
+        "Registration": "Investor must register and be approved by Admin before login",
+        "Access": [
+          "See available lands with details, permissions, and timelines",
+          "Send interest request to one land only (one-to-one deal)",
+          "After Admin accepts interest request, cannot request another land"
+        ],
+        "Tasks": [
+          "Complete dependent tasks after interest is accepted",
+          "Update timelines for tasks",
+          "Upload SLA documents/images",
+          "Raise tickets to roles"
+        ]
+      },
+      "RESalesAdvisor": {
+        "Access": [
+          "Login to see forms assigned by Admin"
+        ],
+        "Tasks": [
+          "Reply with timeline and task status",
+          "Upload SLA forms/images",
+          "Raise tickets to Admin"
+        ]
+      },
+      "REAnalyst": {
+        "Access": [
+          "Login to see forms assigned by Admin"
+        ],
+        "Tasks": [
+          "Reply with timeline and task status",
+          "Upload SLA forms/images",
+          "Raise tickets to Admin"
+        ]
+      },
+      "REGovernanceLead": {
+        "Access": [
+          "Login to see forms assigned by Admin"
+        ],
+        "Tasks": [
+          "Reply with timeline and task status",
+          "Upload SLA forms/images",
+          "Raise tickets to Admin"
+        ]
+      },
+      "ProjectManager": {
+        "Tasks": [
+          "Final RTB (Ready to Build) assignment",
+          "Upload SLA forms/images",
+          "Raise tickets to Admin"
+        ]
+      }
+    },
+    "WorkflowStates": {
+      "Submitted": "Landowner submits form",
+      "VerifiedByAdmin": "Admin verifies and approves",
+      "TasksAssigned": "Admin assigns tasks to roles",
+      "InProgress": "Roles update status, timelines, upload documents",
+      "InterestRequest": "Investor sends request for a land",
+      "InterestAccepted": "Admin accepts investor request (one-to-one deal enforced)",
+      "ReadyToBuild": "All tasks approved and assigned to Project Manager"
+    },
+    "Tickets": {
+      "RolesToAdmin": "All roles can raise tickets to Admin",
+      "InvestorToRoles": "Investor can raise tickets to roles"
+    },
+    "Uploads": {
+      "SLAForms": "All roles and Admin can upload SLA forms/images"
+    }
+  }
+}

@@ -21,28 +21,34 @@ const RoleBasedSidebar = ({ collapsed, onToggle }) => {
         ];
 
         // Add role-specific items
-        if (hasRole('landowner')) {
-            baseItems.push(
-                {
-                    label: 'My Properties',
-                    icon: 'MapPin',
-                    path: '/landowner/properties',
-                    description: 'Manage your land listings'
-                },
-                {
-                    label: 'Inquiries',
-                    icon: 'MessageCircle',
-                    path: '/landowner/inquiries',
-                    description: 'View investor interest'
-                },
-                {
-                    label: 'Documents',
-                    icon: 'FileText',
-                    path: '/landowner/documents',
-                    description: 'Property documentation'
-                }
-            );
+    if (hasRole('landowner')) {
+      baseItems.push(
+        {
+          label: 'My Properties',
+          icon: 'MapPin',
+          path: '/landowner/properties',
+          description: 'Manage your land listings'
+        },
+        {
+          label: 'Register Site',
+          icon: 'Plus',
+          path: '/landowner/site-registration',
+          description: 'Register new land for development'
+        },
+        {
+          label: 'Inquiries',
+          icon: 'MessageCircle',
+          path: '/landowner/inquiries',
+          description: 'View investor interest'
+        },
+        {
+          label: 'Documents',
+          icon: 'FileText',
+          path: '/landowner/documents',
+          description: 'Property documentation'
         }
+      );
+    }
 
         if (hasRole('investor')) {
             baseItems.push(
@@ -67,34 +73,40 @@ const RoleBasedSidebar = ({ collapsed, onToggle }) => {
             );
         }
 
-        if (hasRole('administrator')) {
-            baseItems.push(
-                {
-                    label: 'User Management',
-                    icon: 'Users',
-                    path: '/admin/users',
-                    description: 'Manage user accounts'
-                },
-                {
-                    label: 'System Reports',
-                    icon: 'BarChart3',
-                    path: '/admin/reports',
-                    description: 'Platform analytics'
-                },
-                {
-                    label: 'Content Review',
-                    icon: 'FileCheck',
-                    path: '/admin/review',
-                    description: 'Review properties'
-                },
-                {
-                    label: 'System Settings',
-                    icon: 'Settings',
-                    path: '/admin/settings',
-                    description: 'Platform configuration'
-                }
-            );
+    if (hasRole('administrator')) {
+      baseItems.push(
+        {
+          label: 'Workflow Management',
+          icon: 'Settings',
+          path: '/admin/workflows',
+          description: 'Manage site registration workflows'
+        },
+        {
+          label: 'User Management',
+          icon: 'Users',
+          path: '/admin/users',
+          description: 'Manage user accounts'
+        },
+        {
+          label: 'System Reports',
+          icon: 'BarChart3',
+          path: '/admin/reports',
+          description: 'Platform analytics'
+        },
+        {
+          label: 'Content Review',
+          icon: 'FileCheck',
+          path: '/admin/review',
+          description: 'Review properties'
+        },
+        {
+          label: 'System Settings',
+          icon: 'Settings',
+          path: '/admin/settings',
+          description: 'Platform configuration'
         }
+      );
+    }
 
         if (hasRole('re_governance_lead')) {
             baseItems.push(
@@ -119,74 +131,86 @@ const RoleBasedSidebar = ({ collapsed, onToggle }) => {
             );
         }
 
-        if (hasRole('re_sales_advisor')) {
-            baseItems.push(
-                {
-                    label: 'Sales Pipeline',
-                    icon: 'TrendingUp',
-                    path: '/sales/pipeline',
-                    description: 'Manage sales opportunities'
-                },
-                {
-                    label: 'Clients',
-                    icon: 'Users',
-                    path: '/sales/clients',
-                    description: 'Client management'
-                },
-                {
-                    label: 'Deals',
-                    icon: 'Handshake',
-                    path: '/sales/deals',
-                    description: 'Deal tracking'
-                }
-            );
+    if (hasRole('re_sales_advisor')) {
+      baseItems.push(
+        {
+          label: 'Task Management',
+          icon: 'CheckSquare',
+          path: '/roles/tasks',
+          description: 'Manage assigned tasks'
+        },
+        {
+          label: 'Sales Pipeline',
+          icon: 'TrendingUp',
+          path: '/sales/pipeline',
+          description: 'Manage sales opportunities'
+        },
+        {
+          label: 'Clients',
+          icon: 'Users',
+          path: '/sales/clients',
+          description: 'Client management'
+        },
+        {
+          label: 'Deals',
+          icon: 'Handshake',
+          path: '/sales/deals',
+          description: 'Deal tracking'
         }
+      );
+    }
 
-        if (hasRole('re_analyst')) {
-            baseItems.push(
-                {
-                    label: 'Analysis Queue',
-                    icon: 'BarChart3',
-                    path: '/analyst/queue',
-                    description: 'Pending analyses'
-                },
-                {
-                    label: 'Reports',
-                    icon: 'FileText',
-                    path: '/analyst/reports',
-                    description: 'Analysis reports'
-                },
-                {
-                    label: 'Data Tools',
-                    icon: 'Database',
-                    path: '/analyst/tools',
-                    description: 'Analysis tools'
-                }
-            );
+    if (hasRole('re_analyst')) {
+      baseItems.push(
+        {
+          label: 'Task Management',
+          icon: 'CheckSquare',
+          path: '/roles/tasks',
+          description: 'Manage assigned tasks'
+        },
+        {
+          label: 'Analysis Queue',
+          icon: 'BarChart3',
+          path: '/analyst/queue',
+          description: 'Pending analyses'
+        },
+        {
+          label: 'Reports',
+          icon: 'FileText',
+          path: '/analyst/reports',
+          description: 'Analysis reports'
+        },
+        {
+          label: 'Data Tools',
+          icon: 'Database',
+          path: '/analyst/tools',
+          description: 'Analysis tools'
         }
+      );
+    }
 
-        if (hasRole('project_manager')) {
-            baseItems.push(
-                {
-                    label: 'Projects',
-                    icon: 'FolderOpen',
-                    path: '/project-management',
-                    description: 'Project lifecycle management'
-                },
-                {
-                    label: 'Tasks',
-                    icon: 'CheckSquare',
-                    path: '/project-management/tasks',
-                    description: 'Task management'
-                },
-                {
-                    label: 'Team',
-                    icon: 'Users',
-                    path: '/project-management/team',
-                    description: 'Team management'
-                }
-            );
+    if (hasRole('project_manager')) {
+      baseItems.push(
+        {
+          label: 'Task Management',
+          icon: 'CheckSquare',
+          path: '/roles/tasks',
+          description: 'Manage assigned tasks'
+        },
+        {
+          label: 'Projects',
+          icon: 'FolderOpen',
+          path: '/project-management',
+          description: 'Project lifecycle management'
+        },
+        {
+          label: 'Team',
+          icon: 'Users',
+          path: '/project-management/team',
+          description: 'Team management'
         }
+      );
+    }
 
         // Common items for all roles
         baseItems.push(
