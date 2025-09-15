@@ -1,0 +1,301 @@
+### RenewMart API Testing - HTTP Requests
+### Base URL: http://localhost:8000 (or http://localhost:8001 for testing server)
+
+### Variables
+@baseUrl = http://localhost:8000
+@testUrl = http://localhost:8001
+@token = your_jwt_token_here
+
+###############################################################################
+### AUTHENTICATION ENDPOINTS
+###############################################################################
+
+### Register a new user
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "testpassword123",
+  "full_name": "Test User",
+  "role": "landowner"
+}
+
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username=testuser&password=testpassword123
+
+### Get current user profile
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+
+###############################################################################
+### USER MANAGEMENT
+###############################################################################
+
+### Get all users (admin only)
+GET {{baseUrl}}/api/users/
+Authorization: Bearer {{token}}
+
+### Get user by ID
+GET {{baseUrl}}/api/users/1
+Authorization: Bearer {{token}}
+
+### Update user
+PUT {{baseUrl}}/api/users/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "full_name": "Updated Test User",
+  "email": "updated@example.com"
+}
+
+### Delete user (admin only)
+DELETE {{baseUrl}}/api/users/1
+Authorization: Bearer {{token}}
+
+###############################################################################
+### LAND MANAGEMENT
+###############################################################################
+
+### Get all lands
+GET {{baseUrl}}/api/lands/
+Authorization: Bearer {{token}}
+
+### Get land by ID
+GET {{baseUrl}}/api/lands/1
+Authorization: Bearer {{token}}
+
+### Create new land
+POST {{baseUrl}}/api/lands/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Solar Farm Land",
+  "description": "Perfect location for solar panel installation",
+  "location": "California, USA",
+  "size_acres": 50.5,
+  "price_per_acre": 5000.00,
+  "energy_type": "solar",
+  "coordinates": "34.0522,-118.2437"
+}
+
+### Update land
+PUT {{baseUrl}}/api/lands/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Updated Solar Farm Land",
+  "price_per_acre": 5500.00
+}
+
+### Delete land
+DELETE {{baseUrl}}/api/lands/1
+Authorization: Bearer {{token}}
+
+###############################################################################
+### SECTIONS MANAGEMENT
+###############################################################################
+
+### Get sections for a land
+GET {{baseUrl}}/api/sections/?land_id=1
+Authorization: Bearer {{token}}
+
+### Create new section
+POST {{baseUrl}}/api/sections/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "land_id": 1,
+  "section_name": "North Section",
+  "size_acres": 10.0,
+  "coordinates": "34.0522,-118.2437",
+  "energy_potential": 85.5
+}
+
+###############################################################################
+### TASKS MANAGEMENT
+###############################################################################
+
+### Get all tasks
+GET {{baseUrl}}/api/tasks/
+Authorization: Bearer {{token}}
+
+### Create new task
+POST {{baseUrl}}/api/tasks/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "land_id": 1,
+  "title": "Site Survey",
+  "description": "Conduct initial site survey for solar installation",
+  "assigned_to": 2,
+  "priority": "high",
+  "due_date": "2024-12-31T23:59:59"
+}
+
+### Update task status
+PUT {{baseUrl}}/api/tasks/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "completed"
+}
+
+###############################################################################
+### INVESTORS MANAGEMENT
+###############################################################################
+
+### Get all investors
+GET {{baseUrl}}/api/investors/
+Authorization: Bearer {{token}}
+
+### Create investor interest
+POST {{baseUrl}}/api/investors/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "land_id": 1,
+  "investment_amount": 100000.00,
+  "interest_percentage": 15.0,
+  "notes": "Interested in long-term solar investment"
+}
+
+###############################################################################
+### DOCUMENTS MANAGEMENT
+###############################################################################
+
+### Get documents for a land
+GET {{baseUrl}}/api/documents/?land_id=1
+Authorization: Bearer {{token}}
+
+### Upload document (multipart/form-data)
+POST {{baseUrl}}/api/documents/upload
+Content-Type: multipart/form-data
+Authorization: Bearer {{token}}
+
+# Note: Use a proper HTTP client to upload files
+# This is just a template - actual file upload requires form data
+
+### Update document status
+PUT {{baseUrl}}/api/documents/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "approved"
+}
+
+###############################################################################
+### LOG QUERY ENDPOINTS (Admin Only)
+###############################################################################
+
+### Get general logs
+GET {{baseUrl}}/api/logs/?log_type=general&limit=50
+Authorization: Bearer {{token}}
+
+### Get error logs only
+GET {{baseUrl}}/api/logs/?log_type=errors&level=ERROR&limit=20
+Authorization: Bearer {{token}}
+
+### Get access logs with search
+GET {{baseUrl}}/api/logs/?log_type=access&search=POST&limit=30
+Authorization: Bearer {{token}}
+
+### Get logs with time filter
+GET {{baseUrl}}/api/logs/?log_type=general&start_time=2024-01-01 00:00:00&end_time=2024-12-31 23:59:59
+Authorization: Bearer {{token}}
+
+### Good request
+GET {{baseUrl}}/api/logs/?log_type=general&limit=10
+Authorization: Bearer {{token}}
+
+### Bad request
+GET {{baseUrl}}/api/logs/?log_type=invalid&limit=abc
+Authorization: Bearer {{token}}
+
+### Start after end
+GET {{baseUrl}}/api/logs/?log_type=general&start_time=2024-12-31 23:59:59&end_time=2024-01-01 00:00:00
+Authorization: Bearer {{token}}
+
+### Get logs with pagination
+GET {{baseUrl}}/api/logs/?log_type=general&limit=10&offset=20
+Authorization: Bearer {{token}}
+
+### Get log statistics
+GET {{baseUrl}}/api/logs/stats?log_type=general&hours=24
+Authorization: Bearer {{token}}
+
+### Get log statistics for errors in last 48 hours
+GET {{baseUrl}}/api/logs/stats?log_type=errors&hours=48
+Authorization: Bearer {{token}}
+
+### List available log files
+GET {{baseUrl}}/api/logs/files
+Authorization: Bearer {{token}}
+
+###############################################################################
+### HEALTH AND INFO ENDPOINTS
+###############################################################################
+
+### Health check
+GET {{baseUrl}}/health
+
+### API info
+GET {{baseUrl}}/api/info
+
+### Root endpoint
+GET {{baseUrl}}/
+
+### API Documentation (OpenAPI/Swagger)
+# GET {{baseUrl}}/docs
+
+### Alternative API Documentation (ReDoc)
+# GET {{baseUrl}}/redoc
+
+###############################################################################
+### TESTING WITH DIFFERENT SERVERS
+###############################################################################
+
+### Test server endpoints (port 8001)
+### Use {{testUrl}} instead of {{baseUrl}} for testing server
+
+### Health check on test server
+GET {{testUrl}}/health
+
+### Get logs on test server
+GET {{testUrl}}/api/logs/?log_type=general&limit=10
+Authorization: Bearer {{token}}
+
+###############################################################################
+### NOTES
+###############################################################################
+
+# 1. Replace {{token}} with actual JWT token obtained from login
+# 2. Adjust {{baseUrl}} and {{testUrl}} as needed
+# 3. For file uploads, use a proper HTTP client like Postman or Insomnia
+# 4. Admin endpoints require admin role in JWT token
+# 5. Some endpoints may require specific user roles or ownership
+# 6. Check API documentation at /docs for detailed parameter information
+
+###############################################################################
+### EXAMPLE WORKFLOW
+###############################################################################
+
+# 1. Register a new user
+# 2. Login to get JWT token
+# 3. Update the @token variable with received JWT
+# 4. Create a land listing
+# 5. Upload documents for the land
+# 6. Create tasks for land management
+# 7. Monitor logs for system activity (admin only)
