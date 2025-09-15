@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useWorkflow, useAuth } from '../../contexts/WorkflowContext';
-import { useAuth as useAuthContext } from '../../contexts/AuthContext';
+import { useWorkflow } from '../../contexts/WorkflowContext';
+import { useAuth } from '../../contexts/AuthContext';
 import Header from '../../components/ui/Header';
 import Sidebar from '../../components/ui/Sidebar';
 import BreadcrumbNavigation from '../../components/ui/BreadcrumbNavigation';
@@ -10,15 +10,15 @@ import Input from '../../components/ui/Input';
 import Icon from '../../components/AppIcon';
 
 const TaskManagement = () => {
-  const { 
-    tasks, 
-    loadTasks, 
+  const {
+    tasks,
+    loadTasks,
     updateTask,
     uploadSLADocument,
-    createTicket 
+    createTicket
   } = useWorkflow();
-  
-  const { user } = useAuthContext();
+
+  const { user } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -87,11 +87,11 @@ const TaskManagement = () => {
         notes: taskUpdate.notes,
         updated_at: new Date().toISOString()
       });
-      
+
       setShowUpdateModal(false);
       setSelectedTask(null);
       setTaskUpdate({ status: '', timeline: '', notes: '' });
-      
+
       // Refresh tasks
       await loadTasks();
     } catch (error) {
@@ -110,7 +110,7 @@ const TaskManagement = () => {
         fromRole: userRole,
         toRole: 'administrator'
       });
-      
+
       setShowTicketModal(false);
       setSelectedTask(null);
       setTicketData({ subject: '', description: '', priority: 'medium' });
@@ -124,7 +124,7 @@ const TaskManagement = () => {
 
     try {
       await uploadSLADocument(selectedTask.workflowId, uploadFile, selectedTask.id);
-      
+
       setShowUploadModal(false);
       setSelectedTask(null);
       setUploadFile(null);
@@ -165,20 +165,20 @@ const TaskManagement = () => {
         <title>Task Management - RenewMart</title>
         <meta name="description" content="Manage your assigned tasks and update progress" />
       </Helmet>
-      
+
       <div className="min-h-screen bg-background">
         <Header />
-        
+
         <div className="flex">
-          <Sidebar 
-            collapsed={sidebarCollapsed} 
-            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
-          
+
           <main className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
             <div className="p-6">
               <BreadcrumbNavigation customBreadcrumbs={breadcrumbs} />
-              
+
               <div className="mt-6">
                 <div className="max-w-7xl mx-auto">
                   {/* Header */}
@@ -330,7 +330,7 @@ const TaskManagement = () => {
             <h3 className="text-lg font-semibold text-foreground mb-4">
               Update Task: {selectedTask.title}
             </h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
@@ -402,7 +402,7 @@ const TaskManagement = () => {
             <h3 className="text-lg font-semibold text-foreground mb-4">
               Create Ticket
             </h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
@@ -472,7 +472,7 @@ const TaskManagement = () => {
             <h3 className="text-lg font-semibold text-foreground mb-4">
               Upload SLA Document
             </h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">

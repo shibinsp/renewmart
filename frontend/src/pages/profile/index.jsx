@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usersAPI } from '../../services/api';
 import Header from '../../components/ui/Header';
@@ -11,10 +12,15 @@ import Icon from '../../components/AppIcon';
 
 const ProfileSettings = () => {
     const { user, updateUser } = useAuth();
+    const navigate = useNavigate();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+
+    // Debug logging (remove in production)
+    // console.log('ProfileSettings - User data:', user);
+    // console.log('ProfileSettings - User roles:', user?.roles);
 
     const [formData, setFormData] = useState({
         first_name: '',
@@ -72,6 +78,18 @@ const ProfileSettings = () => {
         { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard' },
         { label: 'Profile Settings', icon: 'User' }
     ];
+
+    // Show loading if user data is not available
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    <p className="text-muted-foreground">Loading profile...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -179,8 +197,8 @@ const ProfileSettings = () => {
                                             {/* Message */}
                                             {message.text && (
                                                 <div className={`mt-4 p-3 rounded-lg ${message.type === 'success'
-                                                        ? 'bg-success/10 text-success border border-success/20'
-                                                        : 'bg-error/10 text-error border border-error/20'
+                                                    ? 'bg-success/10 text-success border border-success/20'
+                                                    : 'bg-error/10 text-error border border-error/20'
                                                     }`}>
                                                     <div className="flex items-center space-x-2">
                                                         <Icon
@@ -197,7 +215,7 @@ const ProfileSettings = () => {
                                                 <Button
                                                     type="button"
                                                     variant="outline"
-                                                    onClick={() => window.history.back()}
+                                                    onClick={() => navigate('/dashboard')}
                                                 >
                                                     Cancel
                                                 </Button>

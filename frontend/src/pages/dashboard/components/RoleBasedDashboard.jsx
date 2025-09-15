@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { debugUser } from '../../../utils/debugUser';
 import ActivityFeed from './ActivityFeed';
 import ProjectChart from './ProjectChart';
 import RoleBasedQuickActions from './RoleBasedQuickActions';
@@ -8,6 +9,9 @@ import UpcomingTasks from './UpcomingTasks';
 
 const RoleBasedDashboard = () => {
     const { user } = useAuth();
+
+    // Debug logging (remove in production)
+    // debugUser(user);
 
     const hasRole = (role) => user?.roles?.includes(role);
 

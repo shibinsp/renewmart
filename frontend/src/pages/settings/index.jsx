@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Header from '../../components/ui/Header';
 import Sidebar from '../../components/ui/Sidebar';
@@ -11,6 +12,7 @@ import Icon from '../../components/AppIcon';
 
 const AccountSettings = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -300,8 +302,8 @@ const AccountSettings = () => {
                                     {/* Message */}
                                     {message.text && (
                                         <div className={`p-4 rounded-lg ${message.type === 'success'
-                                                ? 'bg-success/10 text-success border border-success/20'
-                                                : 'bg-error/10 text-error border border-error/20'
+                                            ? 'bg-success/10 text-success border border-success/20'
+                                            : 'bg-error/10 text-error border border-error/20'
                                             }`}>
                                             <div className="flex items-center space-x-2">
                                                 <Icon

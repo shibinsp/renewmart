@@ -4,23 +4,23 @@ import { useAuth } from '../../contexts/AuthContext';
 import Icon from '../AppIcon';
 
 const RoleBasedSidebar = ({ collapsed, onToggle }) => {
-    const { user, hasRole, hasAnyRole } = useAuth();
-    const location = useLocation();
+  const { user, hasRole, hasAnyRole } = useAuth();
+  const location = useLocation();
 
-    const isActive = (path) => location.pathname === path;
+  const isActive = (path) => location.pathname === path;
 
-    // Define navigation items based on roles
-    const getNavigationItems = () => {
-        const baseItems = [
-            {
-                label: 'Dashboard',
-                icon: 'LayoutDashboard',
-                path: '/dashboard',
-                description: 'Overview and analytics'
-            }
-        ];
+  // Define navigation items based on roles
+  const getNavigationItems = () => {
+    const baseItems = [
+      {
+        label: 'Dashboard',
+        icon: 'LayoutDashboard',
+        path: '/dashboard',
+        description: 'Overview and analytics'
+      }
+    ];
 
-        // Add role-specific items
+    // Add role-specific items
     if (hasRole('landowner')) {
       baseItems.push(
         {
@@ -50,28 +50,28 @@ const RoleBasedSidebar = ({ collapsed, onToggle }) => {
       );
     }
 
-        if (hasRole('investor')) {
-            baseItems.push(
-                {
-                    label: 'Browse Properties',
-                    icon: 'Search',
-                    path: '/investor/browse',
-                    description: 'Find investment opportunities'
-                },
-                {
-                    label: 'My Portfolio',
-                    icon: 'Briefcase',
-                    path: '/investor/portfolio',
-                    description: 'Manage investments'
-                },
-                {
-                    label: 'Market Analysis',
-                    icon: 'TrendingUp',
-                    path: '/investor/analysis',
-                    description: 'Market insights'
-                }
-            );
+    if (hasRole('investor')) {
+      baseItems.push(
+        {
+          label: 'Browse Properties',
+          icon: 'Search',
+          path: '/investor/browse',
+          description: 'Find investment opportunities'
+        },
+        {
+          label: 'My Portfolio',
+          icon: 'Briefcase',
+          path: '/investor/portfolio',
+          description: 'Track your investments'
+        },
+        {
+          label: 'Market Analysis',
+          icon: 'TrendingUp',
+          path: '/investor/analysis',
+          description: 'Market insights'
         }
+      );
+    }
 
     if (hasRole('administrator')) {
       baseItems.push(
@@ -108,28 +108,28 @@ const RoleBasedSidebar = ({ collapsed, onToggle }) => {
       );
     }
 
-        if (hasRole('re_governance_lead')) {
-            baseItems.push(
-                {
-                    label: 'Review Queue',
-                    icon: 'FileCheck',
-                    path: '/governance/review',
-                    description: 'Review submissions'
-                },
-                {
-                    label: 'Compliance',
-                    icon: 'Shield',
-                    path: '/governance/compliance',
-                    description: 'Compliance monitoring'
-                },
-                {
-                    label: 'Policies',
-                    icon: 'FileText',
-                    path: '/governance/policies',
-                    description: 'Policy management'
-                }
-            );
+    if (hasRole('re_governance_lead')) {
+      baseItems.push(
+        {
+          label: 'Review Queue',
+          icon: 'FileCheck',
+          path: '/governance/review',
+          description: 'Review submissions'
+        },
+        {
+          label: 'Compliance',
+          icon: 'Shield',
+          path: '/governance/compliance',
+          description: 'Compliance monitoring'
+        },
+        {
+          label: 'Policies',
+          icon: 'FileText',
+          path: '/governance/policies',
+          description: 'Policy management'
         }
+      );
+    }
 
     if (hasRole('re_sales_advisor')) {
       baseItems.push(
@@ -192,6 +192,12 @@ const RoleBasedSidebar = ({ collapsed, onToggle }) => {
     if (hasRole('project_manager')) {
       baseItems.push(
         {
+          label: 'RTB Management',
+          icon: 'Hammer',
+          path: '/project-manager/rtb',
+          description: 'Manage Ready to Build projects'
+        },
+        {
           label: 'Task Management',
           icon: 'CheckSquare',
           path: '/roles/tasks',
@@ -212,101 +218,101 @@ const RoleBasedSidebar = ({ collapsed, onToggle }) => {
       );
     }
 
-        // Common items for all roles
-        baseItems.push(
-            {
-                label: 'Marketplace',
-                icon: 'Store',
-                path: '/marketplace',
-                description: 'Browse and manage PPAs'
-            },
-            {
-                label: 'Documents',
-                icon: 'FileText',
-                path: '/document-management',
-                description: 'Document repository'
-            }
-        );
-
-        return baseItems;
-    };
-
-    const navigationItems = getNavigationItems();
-
-    return (
-        <div className={`fixed left-0 top-16 h-full bg-card border-r border-border transition-all duration-300 z-40 ${collapsed ? 'w-16' : 'w-64'
-            }`}>
-            <div className="flex flex-col h-full">
-                {/* Navigation Header */}
-                <div className="p-4 border-b border-border">
-                    <div className="flex items-center justify-between">
-                        {!collapsed && (
-                            <h2 className="text-lg font-semibold text-foreground">Navigation</h2>
-                        )}
-                        <button
-                            onClick={onToggle}
-                            className="p-1 rounded-md hover:bg-muted transition-colors"
-                        >
-                            <Icon
-                                name={collapsed ? 'ChevronRight' : 'ChevronLeft'}
-                                size={16}
-                                className="text-muted-foreground"
-                            />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Navigation Items */}
-                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                    {navigationItems.map((item, index) => (
-                        <Link
-                            key={index}
-                            to={item.path}
-                            className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors group ${isActive(item.path)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                                }`}
-                        >
-                            <Icon
-                                name={item.icon}
-                                size={20}
-                                className={`flex-shrink-0 ${isActive(item.path) ? 'text-primary-foreground' : 'text-current'
-                                    }`}
-                            />
-                            {!collapsed && (
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium truncate">{item.label}</div>
-                                    <div className="text-xs opacity-75 truncate">{item.description}</div>
-                                </div>
-                            )}
-                        </Link>
-                    ))}
-                </nav>
-
-                {/* User Info Footer */}
-                {!collapsed && (
-                    <div className="p-4 border-t border-border">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                                <Icon name="User" size={16} className="text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-foreground truncate">
-                                    {user?.first_name && user?.last_name
-                                        ? `${user.first_name} ${user.last_name}`
-                                        : 'User'
-                                    }
-                                </div>
-                                <div className="text-xs text-muted-foreground truncate">
-                                    {user?.roles?.[0]?.replace('re_', '').replace('_', ' ') || 'User'}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+    // Common items for all roles
+    baseItems.push(
+      {
+        label: 'Marketplace',
+        icon: 'Store',
+        path: '/marketplace',
+        description: 'Browse and manage PPAs'
+      },
+      {
+        label: 'Documents',
+        icon: 'FileText',
+        path: '/document-management',
+        description: 'Document repository'
+      }
     );
+
+    return baseItems;
+  };
+
+  const navigationItems = getNavigationItems();
+
+  return (
+    <div className={`fixed left-0 top-16 h-full bg-card border-r border-border transition-all duration-300 z-40 ${collapsed ? 'w-16' : 'w-64'
+      }`}>
+      <div className="flex flex-col h-full">
+        {/* Navigation Header */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center justify-between">
+            {!collapsed && (
+              <h2 className="text-lg font-semibold text-foreground">Navigation</h2>
+            )}
+            <button
+              onClick={onToggle}
+              className="p-1 rounded-md hover:bg-muted transition-colors"
+            >
+              <Icon
+                name={collapsed ? 'ChevronRight' : 'ChevronLeft'}
+                size={16}
+                className="text-muted-foreground"
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {navigationItems.map((item, index) => (
+            <Link
+              key={index}
+              to={item.path}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors group ${isActive(item.path)
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+            >
+              <Icon
+                name={item.icon}
+                size={20}
+                className={`flex-shrink-0 ${isActive(item.path) ? 'text-primary-foreground' : 'text-current'
+                  }`}
+              />
+              {!collapsed && (
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{item.label}</div>
+                  <div className="text-xs opacity-75 truncate">{item.description}</div>
+                </div>
+              )}
+            </Link>
+          ))}
+        </nav>
+
+        {/* User Info Footer */}
+        {!collapsed && (
+          <div className="p-4 border-t border-border">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                <Icon name="User" size={16} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-foreground truncate">
+                  {user?.first_name && user?.last_name
+                    ? `${user.first_name} ${user.last_name}`
+                    : 'User'
+                  }
+                </div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {user?.roles?.[0]?.replace('re_', '').replace('_', ' ') || 'User'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default RoleBasedSidebar;

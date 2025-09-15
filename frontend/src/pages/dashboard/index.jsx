@@ -12,6 +12,7 @@ import UpcomingTasks from './components/UpcomingTasks';
 import RoleBasedDashboard from './components/RoleBasedDashboard';
 import { useAuth } from '../../contexts/AuthContext';
 import { usersAPI, landsAPI } from '../../services/api';
+import { debugUser } from '../../utils/debugUser';
 
 const Dashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -78,6 +79,9 @@ const Dashboard = () => {
   const userRole = user?.roles?.[0]?.replace('re_', '').replace('_', ' ') || 'User';
   const userName = user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` :
     dashboardData?.profile?.full_name || 'User';
+
+  // Debug logging (remove in production)
+  // debugUser(user);
 
   const getMetricsForRole = (roles) => {
     const hasRole = (role) => roles?.includes(role);
