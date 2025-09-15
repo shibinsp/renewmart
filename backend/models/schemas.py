@@ -108,11 +108,35 @@ class LuEnergyType(LuEnergyTypeBase):
 # ============================================================================
 
 class UserBase(BaseSchema):
-    email: EmailStr = Field(..., description="User email address")
-    first_name: str = Field(..., min_length=1, max_length=50, description="User first name")
-    last_name: str = Field(..., min_length=1, max_length=50, description="User last name")
-    phone: Optional[str] = Field(None, description="User phone number")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: EmailStr = Field(
+        ..., 
+        description="User email address (must be valid email format)",
+        example="john.doe@example.com"
+    )
+    first_name: str = Field(
+        ..., 
+        min_length=1, 
+        max_length=50, 
+        description="User first name (1-50 characters, letters only)",
+        example="John"
+    )
+    last_name: str = Field(
+        ..., 
+        min_length=1, 
+        max_length=50, 
+        description="User last name (1-50 characters, letters only)",
+        example="Doe"
+    )
+    phone: Optional[str] = Field(
+        None, 
+        description="User phone number (10-15 digits, international format supported)",
+        example="+1234567890"
+    )
+    is_active: bool = Field(
+        True, 
+        description="Whether user account is active and can authenticate",
+        example=True
+    )
 
     @validator('phone')
     def validate_phone(cls, v):
@@ -130,9 +154,38 @@ class UserBase(BaseSchema):
         return v.title()
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8, max_length=128, description="User password")
-    confirm_password: str = Field(..., description="Password confirmation")
-    role: UserRoleEnum = Field(UserRoleEnum.LANDOWNER, description="User role")
+    password: str = Field(
+        ..., 
+        min_length=8, 
+        max_length=128, 
+        description="User password (min 8 chars, must include uppercase, lowercase, digit, and special character)",
+        example="SecurePass123!"
+    )
+    confirm_password: str = Field(
+        ..., 
+        description="Password confirmation (must match password)",
+        example="SecurePass123!"
+    )
+    roles: List[UserRoleEnum] = Field(
+        default=[UserRoleEnum.LANDOWNER], 
+        description="User roles (can have multiple roles)",
+        example=["landowner"]
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "email": "john.doe@example.com",
+                "first_name": "John",
+                "last_name": "Doe",
+                "phone": "+1234567890",
+                "password": "SecurePass123!",
+                "confirm_password": "SecurePass123!",
+                "roles": ["landowner"],
+                "is_active": True
+            }
+        }
+    )
 
     @validator('password')
     def validate_password(cls, v):
@@ -167,22 +220,117 @@ class User(UserBase):
     updated_at: datetime
 
 class UserResponse(BaseSchema):
-    user_id: str
-    email: EmailStr
-    first_name: str
-    last_name: str
-    phone: Optional[str] = None
-    is_active: bool
-    roles: List[str] = []
+    user_id: str = Field(
+        ..., 
+        description="Unique user identifier (UUID format)",
+        example="123e4567-e89b-12d3-a456-426614174000"
+    )
+    email: EmailStr = Field(
+        ..., 
+        description="User email address",
+        example="john.doe@example.com"
+    )
+    first_name: str = Field(
+        ..., 
+        description="User first name",
+        example="John"
+    )
+    last_name: str = Field(
+        ..., 
+        description="User last name",
+        example="Doe"
+    )
+    phone: Optional[str] = Field(
+        None, 
+        description="User phone number",
+        example="+1234567890"
+    )
+    is_active: bool = Field(
+        ..., 
+        description="Whether user account is active",
+        example=True
+    )
+    roles: List[str] = Field(
+        default=[], 
+        description="List of user roles",
+        example=["landowner", "investor"]
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                "email": "john.doe@example.com",
+                "first_name": "John",
+                "last_name": "Doe",
+                "phone": "+1234567890",
+                "is_active": True,
+                "roles": ["landowner"]
+            }
+        }
+    )
 
 class UserLogin(BaseSchema):
-    email: EmailStr = Field(..., description="User email address")
-    password: str = Field(..., min_length=1, description="User password")
-    remember_me: bool = Field(False, description="Remember login session")
+    email: EmailStr = Field(
+        ..., 
+        description="User email address for authentication",
+        example="john.doe@example.com"
+    )
+    password: str = Field(
+        ..., 
+        min_length=1, 
+        description="User password",
+        example="SecurePass123!"
+    )
+    remember_me: bool = Field(
+        False, 
+        description="Remember login session for extended period",
+        example=False
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "email": "john.doe@example.com",
+                "password": "SecurePass123!",
+                "remember_me": False
+            }
+        }
+    )
 
 class Token(BaseSchema):
-    access_token: str
-    token_type: str = "bearer"
+    access_token: str = Field(
+        ..., 
+        description="JWT access token for API authentication",
+        example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjNlNDU2Ny1lODliLTEyZDMtYTQ1Ni00MjY2MTQxNzQwMDAiLCJleHAiOjE2NDA5OTUyMDB9.signature"
+    )
+    token_type: str = Field(
+        default="bearer", 
+        description="Token type (always 'bearer')",
+        example="bearer"
+    )
+    user: Optional[UserResponse] = Field(
+        None, 
+        description="User information associated with the token"
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "token_type": "bearer",
+                "user": {
+                    "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                    "email": "john.doe@example.com",
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "phone": "+1234567890",
+                    "is_active": True,
+                    "roles": ["landowner"]
+                }
+            }
+        }
+    )
 
 class TokenData(BaseSchema):
     user_id: Optional[UUID] = None
@@ -594,25 +742,172 @@ class PaginationParams(BaseSchema):
         return v
 
 class ErrorDetail(BaseSchema):
-    field: Optional[str] = Field(None, description="Field that caused the error")
-    message: str = Field(..., description="Error message")
-    code: Optional[str] = Field(None, description="Error code")
+    field: Optional[str] = Field(
+        None, 
+        description="Field that caused the validation error",
+        example="email"
+    )
+    message: str = Field(
+        ..., 
+        description="Human-readable error message",
+        example="Email address is already registered"
+    )
+    code: Optional[str] = Field(
+        None, 
+        description="Machine-readable error code for programmatic handling",
+        example="DUPLICATE_EMAIL"
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "field": "email",
+                "message": "Email address is already registered",
+                "code": "DUPLICATE_EMAIL"
+            }
+        }
+    )
 
 class ErrorResponse(BaseSchema):
-    detail: Union[str, List[ErrorDetail]] = Field(..., description="Error details")
-    status_code: int = Field(..., description="HTTP status code")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
+    detail: Union[str, List[ErrorDetail]] = Field(
+        ..., 
+        description="Error details - either a string message or list of detailed errors"
+    )
+    type: str = Field(
+        default="error", 
+        description="Error type classification",
+        example="validation_error"
+    )
+    status_code: Optional[int] = Field(
+        None, 
+        description="HTTP status code",
+        example=400
+    )
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow, 
+        description="Error occurrence timestamp (UTC)"
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "detail": "Email already registered",
+                    "type": "validation_error",
+                    "status_code": 400,
+                    "timestamp": "2024-01-15T10:30:00Z"
+                },
+                {
+                    "detail": [
+                        {
+                            "field": "password",
+                            "message": "Password must contain at least one uppercase letter",
+                            "code": "INVALID_PASSWORD"
+                        },
+                        {
+                            "field": "email",
+                            "message": "Invalid email format",
+                            "code": "INVALID_EMAIL"
+                        }
+                    ],
+                    "type": "validation_error",
+                    "status_code": 422,
+                    "timestamp": "2024-01-15T10:30:00Z"
+                }
+            ]
+        }
+    )
 
 class SuccessResponse(BaseSchema):
-    message: str = Field(..., description="Success message")
-    data: Optional[Dict[str, Any]] = Field(None, description="Additional data")
+    message: str = Field(
+        ..., 
+        description="Success message describing the completed operation",
+        example="Operation completed successfully"
+    )
+    data: Optional[Dict[str, Any]] = Field(
+        None, 
+        description="Additional data related to the successful operation"
+    )
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow, 
+        description="Operation completion timestamp (UTC)"
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "message": "User created successfully",
+                    "data": {
+                        "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                        "email": "john.doe@example.com"
+                    },
+                    "timestamp": "2024-01-15T10:30:00Z"
+                },
+                {
+                    "message": "Password updated successfully",
+                    "timestamp": "2024-01-15T10:30:00Z"
+                }
+            ]
+        }
+    )
 
 class PaginatedResponse(BaseSchema):
-    items: List[Any] = Field(..., description="List of items")
-    total: int = Field(..., ge=0, description="Total number of items")
-    page: int = Field(..., ge=1, description="Current page number")
-    size: int = Field(..., ge=1, description="Items per page")
-    pages: int = Field(..., ge=0, description="Total number of pages")
+    items: List[Any] = Field(
+        ..., 
+        description="List of items for the current page"
+    )
+    total: int = Field(
+        ..., 
+        ge=0, 
+        description="Total number of items across all pages",
+        example=150
+    )
+    page: int = Field(
+        ..., 
+        ge=1, 
+        description="Current page number (1-based)",
+        example=2
+    )
+    size: int = Field(
+        ..., 
+        ge=1, 
+        description="Number of items per page",
+        example=20
+    )
+    pages: int = Field(
+        ..., 
+        ge=0, 
+        description="Total number of pages",
+        example=8
+    )
+    has_next: bool = Field(
+        ..., 
+        description="Whether there are more pages after the current one",
+        example=True
+    )
+    has_prev: bool = Field(
+        ..., 
+        description="Whether there are pages before the current one",
+        example=True
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "items": [
+                    {"id": 1, "name": "Item 1"},
+                    {"id": 2, "name": "Item 2"}
+                ],
+                "total": 150,
+                "page": 2,
+                "size": 20,
+                "pages": 8,
+                "has_next": True,
+                "has_prev": True
+            }
+        }
+    )
 
 # Forward references
 LandWithSections.model_rebuild()

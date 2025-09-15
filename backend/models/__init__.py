@@ -1,6 +1,16 @@
-# Import only schemas for now since individual model files don't exist
-# All models are defined in schemas.py
+# Import all ORM models to ensure they are registered with SQLAlchemy
+from .users import User, UserRole
+from .lookup_tables import LuRole, LuStatus, LuTaskStatus, LuEnergyType
+from .lands import Land, LandSection, SectionDefinition
+from .documents import Document
+from .tasks import Task, TaskHistory
+from .investors import InvestorInterest
 
 __all__ = [
-    # All models are available through schemas
+    'User', 'UserRole',
+    'LuRole', 'LuStatus', 'LuTaskStatus', 'LuEnergyType',
+    'Land', 'LandSection', 'SectionDefinition',
+    'Document',
+    'Task', 'TaskHistory',
+    'InvestorInterest'
 ]
