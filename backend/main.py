@@ -11,16 +11,12 @@ from database import engine, Base
 from routers import auth, users, lands, sections, tasks, investors, documents, logs as logs_router
 import logs
 from logs import log_request_middleware, setup_request_logging
-from settings import get_settings
-
-
-# Get application settings
-settings = get_settings()
+from config import settings
 
 # Configure logging based on settings
 logging.basicConfig(
-    level=getattr(logging, settings.logging.level),
-    format=settings.logging.format
+    level=getattr(logging, settings.LOG_LEVEL),
+    format=settings.LOG_FORMAT
 )
 logger = logging.getLogger(__name__)
 
@@ -35,29 +31,29 @@ async def lifespan(app: FastAPI):
     pass
 
 app = FastAPI(
-    title=settings.api.title,
-    description=settings.api.description,
-    version=settings.api.version,
-    docs_url=settings.api.docs_url,
-    redoc_url=settings.api.redoc_url,
-    openapi_url=settings.api.openapi_url,
-    debug=settings.debug,
+    title="RenewMart API",
+    description="RenewMart - Renewable Energy Land Management Platform",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    debug=settings.DEBUG,
     lifespan=lifespan
 )
 
 # Security middleware
 app.add_middleware(
     TrustedHostMiddleware, 
-    allowed_hosts=settings.security.allowed_hosts
+    allowed_hosts=["localhost", "127.0.0.1", "*"]
 )
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors.allow_origins,
-    allow_credentials=settings.cors.allow_credentials,
-    allow_methods=settings.cors.allow_methods,
-    allow_headers=settings.cors.allow_headers,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=settings.ALLOWED_METHODS,
+    allow_headers=settings.ALLOWED_HEADERS,
 )
 
 # Request timing and logging middleware
@@ -119,12 +115,12 @@ app.include_router(logs_router.router, prefix="/api", tags=["logs"])  # logs rou
 @app.get("/")
 async def root():
     return {
-        "message": f"Welcome to {settings.api.title}",
-        "version": settings.api.version,
-        "description": settings.api.description,
-        "environment": settings.environment,
-        "docs": settings.api.docs_url,
-        "redoc": settings.api.redoc_url
+        "message": "Welcome to RenewMart API",
+        "version": "1.0.0",
+        "description": "RenewMart - Renewable Energy Land Management Platform",
+        "environment": settings.get("ENVIRONMENT", "development"),
+        "docs": "/docs",
+        "redoc": "/redoc"
     }
 
 @app.get("/health")
@@ -132,9 +128,9 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": time.time(),
-        "version": settings.api.version,
-        "environment": settings.environment,
-        "debug": settings.debug
+        "version": "1.0.0",
+        "environment": settings.get("ENVIRONMENT", "development"),
+        "debug": settings.DEBUG
     }
 
 @app.get("/api/info")
@@ -164,8 +160,8 @@ async def api_info():
 if __name__ == "__main__":
     uvicorn.run(
         "main:app", 
-        host=settings.server.host, 
-        port=settings.server.port, 
-        reload=settings.server.reload,
-        log_level=settings.logging.level.lower()
+        host=settings.HOST, 
+        port=settings.PORT, 
+        reload=settings.RELOAD,
+        log_level=settings.LOG_LEVEL.lower()
     )

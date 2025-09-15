@@ -21,7 +21,7 @@ import logs #### Dummy Database
 sys.path.insert(0, str(Path(__file__).parent))
 
 from logs import setup_logging, get_logger
-from settings import get_settings, Settings
+from config import settings
 
 # Global variables
 server = None
@@ -47,19 +47,16 @@ def signal_handler(signum, frame):
 
 def setup_environment():
     """
-    Setup environment variables and configuration using Pydantic settings.
+    Setup environment variables and configuration using Dynaconf.
     """
     try:
-        # Load settings to validate configuration
-        settings = get_settings()
-        
         # Set environment variables from settings if not already set
         env_mappings = {
-            'ENVIRONMENT': settings.environment,
-            'SERVER_HOST': settings.server.host,
-            'SERVER_PORT': str(settings.server.port),
-            'SERVER_RELOAD': str(settings.server.reload).lower(),
-            'LOG_LEVEL': settings.logging.level.lower()
+            'ENVIRONMENT': settings.get('ENVIRONMENT', 'development'),
+            'SERVER_HOST': settings.HOST,
+            'SERVER_PORT': str(settings.PORT),
+            'SERVER_RELOAD': str(settings.RELOAD).lower(),
+            'LOG_LEVEL': settings.LOG_LEVEL.lower()
         }
         
         for key, value in env_mappings.items():
@@ -68,9 +65,6 @@ def setup_environment():
                 
         return settings
         
-    except ValidationError as e:
-        print(f"Configuration validation error: {e}")
-        sys.exit(1)
     except Exception as e:
         print(f"Error setting up environment: {e}")
         sys.exit(1)
@@ -103,49 +97,49 @@ def validate_environment():
     
     return True
 
-def get_server_config(args, settings: Settings):
+def get_server_config(args, settings):
     """
     Get server configuration from arguments, settings, and environment variables.
     
     Args:
         args: Parsed command line arguments
-        settings: Pydantic settings instance
+        settings: Dynaconf settings instance
     
     Returns:
         dict: Server configuration
     """
     config = {
         'app': 'main:app',
-        'host': args.host or settings.server.host,
-        'port': int(args.port or settings.server.port),
-        'reload': args.reload if args.reload is not None else settings.server.reload,
-        'log_level': args.log_level or settings.logging.level.lower(),
+        'host': args.host or settings.HOST,
+        'port': int(args.port or settings.PORT),
+        'reload': args.reload if args.reload is not None else settings.RELOAD,
+        'log_level': args.log_level or settings.LOG_LEVEL.lower(),
         'access_log': True,
         'use_colors': True,
-        'workers': settings.server.workers if not settings.server.reload else 1
+        'workers': 1 if settings.RELOAD else 4
     }
     
     # Disable reload and colors in production
-    if settings.environment == 'production':
+    if settings.get('ENVIRONMENT', 'development') == 'production':
         config['reload'] = False
         config['use_colors'] = False
     
     return config
 
-def start_server(config, settings: Settings):
+def start_server(config, settings):
     """
     Start the FastAPI server with the given configuration.
     
     Args:
         config: Server configuration dictionary
-        settings: Pydantic settings instance
+        settings: Dynaconf settings instance
     """
     global server, logger
     
     try:
-        logger.info(f"Starting {settings.api.title} v{settings.api.version}...")
-        logger.info(f"Environment: {settings.environment}")
-        logger.info(f"Debug mode: {settings.debug}")
+        logger.info(f"Starting RenewMart API v1.0.0...")
+        logger.info(f"Environment: {settings.get('ENVIRONMENT', 'development')}")
+        logger.info(f"Debug mode: {settings.DEBUG}")
         logger.info(f"Server configuration: {config}")
         
         # Validate configuration
@@ -158,10 +152,8 @@ def start_server(config, settings: Settings):
         server = uvicorn.Server(server_config)
         
         logger.info(f"Server starting on http://{config['host']}:{config['port']}")
-        if settings.api.docs_url:
-            logger.info(f"API documentation available at http://{config['host']}:{config['port']}{settings.api.docs_url}")
-        if settings.api.redoc_url:
-            logger.info(f"Alternative API docs at http://{config['host']}:{config['port']}{settings.api.redoc_url}")
+        logger.info(f"API documentation available at http://{config['host']}:{config['port']}/docs")
+        logger.info(f"Alternative API docs at http://{config['host']}:{config['port']}/redoc")
         
         # Start the server
         server.run()
@@ -254,7 +246,7 @@ Examples:
         }
         
         log_level = log_level_map.get(
-            args.log_level or settings.logging.level.lower(),
+            args.log_level or settings.LOG_LEVEL.lower(),
             20
         )
         
@@ -265,9 +257,9 @@ Examples:
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         
-        logger.info(f"{settings.api.title} Server Starting...")
-        logger.info(f"Environment: {settings.environment}")
-        logger.info(f"Debug mode: {settings.debug}")
+        logger.info(f"RenewMart API Server Starting...")
+        logger.info(f"Environment: {settings.get('ENVIRONMENT', 'development')}")
+        logger.info(f"Debug mode: {settings.DEBUG}")
         logger.info(f"Python version: {sys.version}")
         logger.info(f"Working directory: {os.getcwd()}")
         

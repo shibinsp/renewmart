@@ -1,0 +1,59 @@
+[default]
+# Database Configuration
+DATABASE_URL = "postgresql://renewmart_user:renewmart_password@localhost/renewmart_db"
+DATABASE_HOST = "localhost"
+DATABASE_PORT = 5432
+DATABASE_NAME = "renewmart_db"
+DATABASE_USER = "renewmart_user"
+DATABASE_PASSWORD = "renewmart_password"
+
+# Security Configuration
+SECRET_KEY = "your-secret-key-here-change-in-production"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Server Configuration
+HOST = "127.0.0.1"
+PORT = 8000
+DEBUG = true
+RELOAD = true
+
+# CORS Configuration
+ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:4028"]
+ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+ALLOWED_HEADERS = ["*"]
+
+# Logging Configuration
+LOG_LEVEL = "INFO"
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+LOG_FILE = "logs/renewmart.log"
+ACCESS_LOG_FILE = "logs/renewmart_access.log"
+ERROR_LOG_FILE = "logs/renewmart_errors.log"
+
+# File Upload Configuration
+UPLOAD_DIR = "uploads"
+MAX_FILE_SIZE = 10485760  # 10MB in bytes
+ALLOWED_FILE_TYPES = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"]
+
+[development]
+# Development specific settings
+DEBUG = true
+RELOAD = true
+LOG_LEVEL = "DEBUG"
+
+[production]
+# Production specific settings
+DEBUG = false
+RELOAD = false
+LOG_LEVEL = "WARNING"
+HOST = "0.0.0.0"
+# Override with environment variables in production
+SECRET_KEY = "@env:SECRET_KEY"
+DATABASE_URL = "@env:DATABASE_URL"
+ALLOWED_ORIGINS = ["@env:FRONTEND_URL"]
+
+[testing]
+# Testing specific settings
+DATABASE_URL = "postgresql://test_user:test_password@localhost/test_renewmart_db"
+DEBUG = true
+LOG_LEVEL = "DEBUG"

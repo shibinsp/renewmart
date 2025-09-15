@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, validator, root_validator
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, validator, model_validator
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, date
 from uuid import UUID
@@ -148,13 +148,11 @@ class UserCreate(UserBase):
             raise ValueError('Password must contain at least one special character')
         return v
 
-    @root_validator
-    def validate_passwords_match(cls, values):
-        password = values.get('password')
-        confirm_password = values.get('confirm_password')
-        if password and confirm_password and password != confirm_password:
+    @model_validator(mode='after')
+    def validate_passwords_match(self):
+        if self.password and self.confirm_password and self.password != self.confirm_password:
             raise ValueError('Passwords do not match')
-        return values
+        return self
 
 class UserUpdate(BaseSchema):
     email: Optional[EmailStr] = None
@@ -167,6 +165,15 @@ class User(UserBase):
     user_id: UUID
     created_at: datetime
     updated_at: datetime
+
+class UserResponse(BaseSchema):
+    user_id: str
+    email: EmailStr
+    first_name: str
+    last_name: str
+    phone: Optional[str] = None
+    is_active: bool
+    roles: List[str] = []
 
 class UserLogin(BaseSchema):
     email: EmailStr = Field(..., description="User email address")
@@ -522,7 +529,7 @@ class InvestorListing(BaseSchema):
 class LogQueryParams(BaseSchema):
     start: Optional[datetime] = Field(None, description="Start datetime for log filtering")
     end: Optional[datetime] = Field(None, description="End datetime for log filtering")
-    level: Optional[str] = Field(None, regex="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$", description="Log level filter")
+    level: Optional[str] = Field(None, pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$", description="Log level filter")
     source: Optional[str] = Field(None, max_length=100, description="Log source filter")
     message: Optional[str] = Field(None, max_length=500, description="Message content filter")
     limit: int = Field(100, ge=1, le=1000, description="Maximum number of logs to return")
