@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authAPI } from '../../services/api';
 import RegistrationHeader from './components/RegistrationHeader';
 import StepIndicator from './components/StepIndicator';
 import AccountDetailsStep from './components/AccountDetailsStep';
@@ -125,12 +126,44 @@ const Registration = () => {
 
   const handleComplete = async () => {
     setIsLoading(true);
+    setErrors({});
     
-    // Simulate registration completion
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Navigate to dashboard after successful registration
-    navigate('/dashboard');
+    try {
+      // Prepare registration data
+      const registrationData = {
+        email: formData.email,
+        password: formData.password,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        role: formData.role
+      };
+      
+      // Register user
+      const response = await authAPI.register(registrationData);
+      
+      if (response.access_token) {
+        // Store token and user data
+        localStorage.setItem('authToken', response.access_token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        // Navigate to dashboard after successful registration
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Registration failed:', error);
+      
+      // Handle registration errors
+      if (error.response?.data?.detail) {
+        setErrors({ general: error.response.data.detail });
+      } else if (error.response?.status === 400) {
+        setErrors({ general: 'Registration failed. Please check your information and try again.' });
+      } else {
+        setErrors({ general: 'Registration failed. Please try again later.' });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const canProceed = () => {
@@ -182,6 +215,7 @@ const Registration = () => {
           <VerificationStep
             formData={formData}
             onComplete={handleComplete}
+            errors={errors}
           />
         );
       default:

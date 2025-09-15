@@ -1,513 +1,520 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List, Optional
+from uuid import UUID
 from decimal import Decimal
+
 from database import get_db
-from models.lands import Land, LandSection
-from models.users import User, UserRole
-from models.lookup_tables import SectionDefinition
-from routers.auth import get_current_user
-from pydantic import BaseModel
-import uuid
+from auth import get_current_user, require_admin
+from models.schemas import (
+    LandCreate, LandUpdate, LandResponse,
+    LandSectionCreate, LandSection,
+    SectionDefinition, MessageResponse
+)
 
-router = APIRouter()
+router = APIRouter(prefix="/lands", tags=["lands"])
 
-# Pydantic models
-class LandCreate(BaseModel):
-    title: str
-    location_text: Optional[str] = None
-    coordinates: Optional[dict] = None
-    area_acres: Optional[Decimal] = None
-    land_type: Optional[str] = None
-
-class LandUpdate(BaseModel):
-    title: Optional[str] = None
-    location_text: Optional[str] = None
-    coordinates: Optional[dict] = None
-    area_acres: Optional[Decimal] = None
-    land_type: Optional[str] = None
-    admin_notes: Optional[str] = None
-    energy_key: Optional[str] = None
-    capacity_mw: Optional[Decimal] = None
-    price_per_mwh: Optional[Decimal] = None
-    timeline_text: Optional[str] = None
-    contract_term_years: Optional[int] = None
-    developer_name: Optional[str] = None
-
-class LandResponse(BaseModel):
-    land_id: str
-    landowner_id: str
-    title: str
-    location_text: Optional[str]
-    coordinates: Optional[dict]
-    area_acres: Optional[Decimal]
-    land_type: Optional[str]
-    status: str
-    admin_notes: Optional[str]
-    energy_key: Optional[str]
-    capacity_mw: Optional[Decimal]
-    price_per_mwh: Optional[Decimal]
-    timeline_text: Optional[str]
-    contract_term_years: Optional[int]
-    developer_name: Optional[str]
-    published_at: Optional[str]
-    interest_locked_at: Optional[str]
-    created_at: str
-    updated_at: str
-    
-    class Config:
-        from_attributes = True
-
-class InvestorListingResponse(BaseModel):
-    land_id: str
-    title: str
-    location_text: Optional[str]
-    capacity_mw: Optional[Decimal]
-    price_per_mwh: Optional[Decimal]
-    timeline_text: Optional[str]
-    contract_term_years: Optional[int]
-    developer_name: Optional[str]
-    energy_key: Optional[str]
-    
-    class Config:
-        from_attributes = True
-
-class ProjectDefinition(BaseModel):
-    energy_key: str
-    capacity_mw: Decimal
-    price_per_mwh: Decimal
-    timeline_text: str
-    contract_term_years: int
-    developer_name: str
-
-# Helper functions
-def check_user_role(db: Session, user_id: str, required_roles: List[str]) -> bool:
-    user_roles = db.query(UserRole).filter(UserRole.user_id == user_id).all()
-    roles = [ur.role_key for ur in user_roles]
-    return any(role in roles for role in required_roles)
-
-def is_admin(db: Session, user_id: str) -> bool:
-    return check_user_role(db, user_id, ["administrator"])
-
-def is_landowner(db: Session, user_id: str, land_id: str) -> bool:
-    land = db.query(Land).filter(Land.land_id == land_id).first()
-    return land and str(land.landowner_id) == str(user_id)
-
-# API endpoints
+# Land CRUD operations
 @router.post("/", response_model=LandResponse)
 async def create_land(
     land_data: LandCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new land draft (landowner only)"""
-    # Check if user has landowner role
-    if not check_user_role(db, str(current_user.user_id), ["landowner"]):
+    """Create a new land entry (authenticated users)."""
+    # Use stored procedure to create draft land
+    query = text("""
+        SELECT sp_land_create_draft(
+            :owner_id, :title, :location_text, :coordinates, :area_acres
+        ) as land_id
+    """)
+    
+    result = db.execute(query, {
+        "owner_id": current_user["user_id"],
+        "title": land_data.title,
+        "location_text": land_data.location_text,
+        "coordinates": land_data.coordinates,
+        "area_acres": float(land_data.area_acres) if land_data.area_acres else None
+    }).fetchone()
+    
+    if not result or not result.land_id:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only landowners can create land listings"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create land"
         )
     
-    # Create new land
-    new_land = Land(
-        landowner_id=current_user.user_id,
-        title=land_data.title,
-        location_text=land_data.location_text,
-        coordinates=land_data.coordinates,
-        area_acres=land_data.area_acres,
-        land_type=land_data.land_type,
-        status='draft'
-    )
+    # Update additional fields that are not handled by the stored procedure
+    land_id = result.land_id
+    update_fields = []
+    params = {"land_id": str(land_id)}
     
-    db.add(new_land)
+    if land_data.land_type:
+        update_fields.append("land_type = :land_type")
+        params["land_type"] = land_data.land_type
+    
+    if land_data.energy_key:
+        update_fields.append("energy_key = :energy_key")
+        params["energy_key"] = land_data.energy_key
+    
+    if land_data.capacity_mw:
+        update_fields.append("capacity_mw = :capacity_mw")
+        params["capacity_mw"] = float(land_data.capacity_mw)
+    
+    if land_data.price_per_mwh:
+        update_fields.append("price_per_mwh = :price_per_mwh")
+        params["price_per_mwh"] = float(land_data.price_per_mwh)
+    
+    if land_data.timeline_text:
+        update_fields.append("timeline_text = :timeline_text")
+        params["timeline_text"] = land_data.timeline_text
+    
+    if land_data.contract_term_years:
+        update_fields.append("contract_term_years = :contract_term_years")
+        params["contract_term_years"] = land_data.contract_term_years
+    
+    if land_data.developer_name:
+        update_fields.append("developer_name = :developer_name")
+        params["developer_name"] = land_data.developer_name
+    
+    if land_data.admin_notes:
+        update_fields.append("admin_notes = :admin_notes")
+        params["admin_notes"] = land_data.admin_notes
+    
+    if update_fields:
+        update_query = text(f"""
+            UPDATE lands SET {', '.join(update_fields)}, updated_at = CURRENT_TIMESTAMP
+            WHERE land_id = :land_id
+        """)
+        db.execute(update_query, params)
+    
     db.commit()
-    db.refresh(new_land)
     
-    # Bootstrap sections with default routing
-    section_definitions = db.query(SectionDefinition).all()
-    for section_def in section_definitions:
-        land_section = LandSection(
-            land_id=new_land.land_id,
-            section_key=section_def.section_key,
-            assigned_role=section_def.default_role_reviewer,
-            status='draft',
-            data={}
-        )
-        db.add(land_section)
-    
-    db.commit()
-    
-    return LandResponse(
-        land_id=str(new_land.land_id),
-        landowner_id=str(new_land.landowner_id),
-        title=new_land.title,
-        location_text=new_land.location_text,
-        coordinates=new_land.coordinates,
-        area_acres=new_land.area_acres,
-        land_type=new_land.land_type,
-        status=new_land.status,
-        admin_notes=new_land.admin_notes,
-        energy_key=new_land.energy_key,
-        capacity_mw=new_land.capacity_mw,
-        price_per_mwh=new_land.price_per_mwh,
-        timeline_text=new_land.timeline_text,
-        contract_term_years=new_land.contract_term_years,
-        developer_name=new_land.developer_name,
-        published_at=new_land.published_at.isoformat() if new_land.published_at else None,
-        interest_locked_at=new_land.interest_locked_at.isoformat() if new_land.interest_locked_at else None,
-        created_at=new_land.created_at.isoformat(),
-        updated_at=new_land.updated_at.isoformat()
-    )
+    # Fetch the created land
+    return await get_land(land_id, current_user, db)
 
 @router.get("/", response_model=List[LandResponse])
-async def get_lands(
-    skip: int = 0,
-    limit: int = 100,
-    status: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
+async def list_lands(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    status_filter: Optional[str] = Query(None, description="Filter by status"),
+    owner_id: Optional[UUID] = Query(None, description="Filter by owner"),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get lands based on user role"""
-    query = db.query(Land)
+    """List lands with optional filters."""
+    # Build dynamic query based on user role and filters
+    base_query = """
+        SELECT l.land_id, l.owner_id, l.title, l.description, l.location,
+               l.total_area, l.price_per_sqft, l.total_price, l.coordinates,
+               l.status_key, l.is_visible_to_investors, l.created_at, l.updated_at,
+               u.first_name || ' ' || u.last_name as owner_name,
+               s.label as status_label
+        FROM lands l
+        JOIN users u ON l.owner_id = u.user_id
+        JOIN lu_status s ON l.status_key = s.status_key
+        WHERE 1=1
+    """
     
-    # Filter based on user role
-    user_roles = db.query(UserRole).filter(UserRole.user_id == current_user.user_id).all()
-    roles = [ur.role_key for ur in user_roles]
+    params = {"skip": skip, "limit": limit}
     
-    if "administrator" not in roles:
-        if "landowner" in roles:
-            # Landowners see only their own lands
-            query = query.filter(Land.landowner_id == current_user.user_id)
-        else:
-            # Other roles see only submitted/approved lands
-            query = query.filter(Land.status.in_(['submitted', 'under_review', 'approved', 'investor_ready']))
+    # Apply filters based on user role
+    user_roles = current_user.get("roles", [])
+    if "administrator" not in user_roles:
+        # Non-admin users can only see their own lands or published lands
+        base_query += " AND (l.owner_id = :current_user_id OR l.status_key = 'published')"
+        params["current_user_id"] = current_user["user_id"]
     
-    if status:
-        query = query.filter(Land.status == status)
+    if status_filter:
+        base_query += " AND l.status_key = :status_filter"
+        params["status_filter"] = status_filter
     
-    lands = query.offset(skip).limit(limit).all()
+    if owner_id:
+        base_query += " AND l.owner_id = :owner_id"
+        params["owner_id"] = str(owner_id)
     
-    result = []
-    for land in lands:
-        result.append(LandResponse(
-            land_id=str(land.land_id),
-            landowner_id=str(land.landowner_id),
-            title=land.title,
-            location_text=land.location_text,
-            coordinates=land.coordinates,
-            area_acres=land.area_acres,
-            land_type=land.land_type,
-            status=land.status,
-            admin_notes=land.admin_notes,
-            energy_key=land.energy_key,
-            capacity_mw=land.capacity_mw,
-            price_per_mwh=land.price_per_mwh,
-            timeline_text=land.timeline_text,
-            contract_term_years=land.contract_term_years,
-            developer_name=land.developer_name,
-            published_at=land.published_at.isoformat() if land.published_at else None,
-            interest_locked_at=land.interest_locked_at.isoformat() if land.interest_locked_at else None,
-            created_at=land.created_at.isoformat(),
-            updated_at=land.updated_at.isoformat()
-        ))
+    base_query += " ORDER BY l.created_at DESC OFFSET :skip LIMIT :limit"
     
-    return result
-
-@router.get("/published", response_model=List[InvestorListingResponse])
-async def get_published_lands(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get published lands for investors"""
-    # Check if user has investor role
-    if not check_user_role(db, str(current_user.user_id), ["investor"]):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only investors can view published listings"
+    results = db.execute(text(base_query), params).fetchall()
+    
+    return [
+        LandResponse(
+            land_id=row.land_id,
+            owner_id=row.owner_id,
+            title=row.title,
+            description=row.description,
+            location=row.location,
+            total_area=Decimal(str(row.total_area)),
+            price_per_sqft=Decimal(str(row.price_per_sqft)),
+            total_price=Decimal(str(row.total_price)),
+            coordinates=row.coordinates,
+            status_key=row.status_key,
+            status_label=row.status_label,
+            is_visible_to_investors=row.is_visible_to_investors,
+            owner_name=row.owner_name,
+            created_at=row.created_at,
+            updated_at=row.updated_at
         )
-    
-    lands = db.query(Land).filter(Land.status == 'published').all()
-    
-    result = []
-    for land in lands:
-        result.append(InvestorListingResponse(
-            land_id=str(land.land_id),
-            title=land.title,
-            location_text=land.location_text,
-            capacity_mw=land.capacity_mw,
-            price_per_mwh=land.price_per_mwh,
-            timeline_text=land.timeline_text,
-            contract_term_years=land.contract_term_years,
-            developer_name=land.developer_name,
-            energy_key=land.energy_key
-        ))
-    
-    return result
+        for row in results
+    ]
 
 @router.get("/{land_id}", response_model=LandResponse)
 async def get_land(
-    land_id: str,
-    current_user: User = Depends(get_current_user),
+    land_id: UUID,
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get land by ID"""
-    land = db.query(Land).filter(Land.land_id == land_id).first()
-    if not land:
+    """Get land by ID."""
+    query = text("""
+        SELECT l.land_id, l.owner_id, l.title, l.description, l.location,
+               l.total_area, l.price_per_sqft, l.total_price, l.coordinates,
+               l.status_key, l.is_visible_to_investors, l.created_at, l.updated_at,
+               u.first_name || ' ' || u.last_name as owner_name,
+               s.label as status_label
+        FROM lands l
+        JOIN users u ON l.owner_id = u.user_id
+        JOIN lu_status s ON l.status_key = s.status_key
+        WHERE l.land_id = :land_id
+    """)
+    
+    result = db.execute(query, {"land_id": str(land_id)}).fetchone()
+    
+    if not result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Land not found"
         )
     
     # Check permissions
-    if not (is_admin(db, str(current_user.user_id)) or 
-            is_landowner(db, str(current_user.user_id), land_id) or
-            land.status in ['published', 'submitted', 'under_review', 'approved']):
+    user_roles = current_user.get("roles", [])
+    if ("administrator" not in user_roles and 
+        str(result.owner_id) != current_user["user_id"] and
+        result.status_key != "published"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
+            detail="Not enough permissions to view this land"
         )
     
     return LandResponse(
-        land_id=str(land.land_id),
-        landowner_id=str(land.landowner_id),
-        title=land.title,
-        location_text=land.location_text,
-        coordinates=land.coordinates,
-        area_acres=land.area_acres,
-        land_type=land.land_type,
-        status=land.status,
-        admin_notes=land.admin_notes,
-        energy_key=land.energy_key,
-        capacity_mw=land.capacity_mw,
-        price_per_mwh=land.price_per_mwh,
-        timeline_text=land.timeline_text,
-        contract_term_years=land.contract_term_years,
-        developer_name=land.developer_name,
-        published_at=land.published_at.isoformat() if land.published_at else None,
-        interest_locked_at=land.interest_locked_at.isoformat() if land.interest_locked_at else None,
-        created_at=land.created_at.isoformat(),
-        updated_at=land.updated_at.isoformat()
+        land_id=result.land_id,
+        owner_id=result.owner_id,
+        title=result.title,
+        description=result.description,
+        location=result.location,
+        total_area=Decimal(str(result.total_area)),
+        price_per_sqft=Decimal(str(result.price_per_sqft)),
+        total_price=Decimal(str(result.total_price)),
+        coordinates=result.coordinates,
+        status_key=result.status_key,
+        status_label=result.status_label,
+        is_visible_to_investors=result.is_visible_to_investors,
+        owner_name=result.owner_name,
+        created_at=result.created_at,
+        updated_at=result.updated_at
     )
 
 @router.put("/{land_id}", response_model=LandResponse)
 async def update_land(
-    land_id: str,
+    land_id: UUID,
     land_update: LandUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update land information"""
-    land = db.query(Land).filter(Land.land_id == land_id).first()
-    if not land:
+    """Update land information (owner or admin only)."""
+    # Check if land exists and user has permission
+    land_check = text("""
+        SELECT owner_id, status_key FROM lands WHERE land_id = :land_id
+    """)
+    
+    land_result = db.execute(land_check, {"land_id": str(land_id)}).fetchone()
+    
+    if not land_result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Land not found"
         )
     
-    # Check permissions - landowner can edit draft, admin can edit all
-    if not (is_admin(db, str(current_user.user_id)) or 
-            (is_landowner(db, str(current_user.user_id), land_id) and land.status == 'draft')):
+    user_roles = current_user.get("roles", [])
+    if ("administrator" not in user_roles and 
+        str(land_result.owner_id) != current_user["user_id"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to update this land"
+        )
+    
+    # Build dynamic update query
+    update_fields = []
+    params = {"land_id": str(land_id)}
+    
+    update_data = land_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        if field in ["title", "description", "location", "coordinates"]:
+            update_fields.append(f"{field} = :{field}")
+            params[field] = value
+        elif field in ["total_area", "price_per_sqft", "total_price"]:
+            update_fields.append(f"{field} = :{field}")
+            params[field] = float(value)
+    
+    if update_fields:
+        update_query = text(f"""
+            UPDATE lands 
+            SET {', '.join(update_fields)}, updated_at = CURRENT_TIMESTAMP
+            WHERE land_id = :land_id
+        """)
+        
+        db.execute(update_query, params)
+        db.commit()
+    
+    return await get_land(land_id, current_user, db)
+
+@router.delete("/{land_id}", response_model=MessageResponse)
+async def delete_land(
+    land_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete land (owner or admin only)."""
+    # Check if land exists and user has permission
+    land_check = text("""
+        SELECT owner_id, status_key FROM lands WHERE land_id = :land_id
+    """)
+    
+    land_result = db.execute(land_check, {"land_id": str(land_id)}).fetchone()
+    
+    if not land_result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Land not found"
+        )
+    
+    user_roles = current_user.get("roles", [])
+    if ("administrator" not in user_roles and 
+        str(land_result.owner_id) != current_user["user_id"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to delete this land"
+        )
+    
+    # Only allow deletion of draft lands
+    if land_result.status_key != "draft":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only draft lands can be deleted"
+        )
+    
+    delete_query = text("DELETE FROM lands WHERE land_id = :land_id")
+    db.execute(delete_query, {"land_id": str(land_id)})
+    db.commit()
+    
+    return MessageResponse(message="Land deleted successfully")
+
+# Land status management
+@router.post("/{land_id}/submit", response_model=MessageResponse)
+async def submit_land_for_review(
+    land_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Submit land for review (owner only)."""
+    # Use stored procedure
+    query = text("SELECT sp_land_submit_for_review(:land_id, :owner_id) as success")
+    
+    try:
+        result = db.execute(query, {
+            "land_id": str(land_id),
+            "owner_id": current_user["user_id"]
+        }).fetchone()
+        
+        db.commit()
+        
+        if result and result.success:
+            return MessageResponse(message="Land submitted for review successfully")
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to submit land for review"
+            )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error submitting land: {str(e)}"
+        )
+
+@router.post("/{land_id}/publish", response_model=MessageResponse)
+async def publish_land(
+    land_id: UUID,
+    current_user: dict = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Publish land (admin only)."""
+    query = text("SELECT sp_publish_land(:land_id) as success")
+    
+    try:
+        result = db.execute(query, {"land_id": str(land_id)}).fetchone()
+        db.commit()
+        
+        if result and result.success:
+            return MessageResponse(message="Land published successfully")
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to publish land"
+            )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error publishing land: {str(e)}"
+        )
+
+@router.post("/{land_id}/mark-rtb", response_model=MessageResponse)
+async def mark_land_ready_to_buy(
+    land_id: UUID,
+    current_user: dict = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Mark land as ready to buy (admin only)."""
+    query = text("SELECT sp_land_mark_rtb(:land_id) as success")
+    
+    try:
+        result = db.execute(query, {"land_id": str(land_id)}).fetchone()
+        db.commit()
+        
+        if result and result.success:
+            return MessageResponse(message="Land marked as ready to buy successfully")
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to mark land as ready to buy"
+            )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error marking land as RTB: {str(e)}"
+        )
+
+# Land sections management
+@router.get("/{land_id}/sections", response_model=List[LandSection])
+async def get_land_sections(
+    land_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all sections for a land."""
+    # First check if user can access this land
+    await get_land(land_id, current_user, db)
+    
+    query = text("""
+        SELECT ls.land_section_id, ls.land_id, ls.section_definition_id,
+               ls.section_data, ls.created_at, ls.updated_at,
+               sd.section_name, sd.section_type, sd.is_required
+        FROM land_sections ls
+        JOIN section_definitions sd ON ls.section_definition_id = sd.section_definition_id
+        WHERE ls.land_id = :land_id
+        ORDER BY sd.section_name
+    """)
+    
+    results = db.execute(query, {"land_id": str(land_id)}).fetchall()
+    
+    return [
+        LandSection(
+            land_section_id=row.land_section_id,
+            land_id=row.land_id,
+            section_definition_id=row.section_definition_id,
+            section_data=row.section_data,
+            created_at=row.created_at,
+            updated_at=row.updated_at
+        )
+        for row in results
+    ]
+
+@router.post("/{land_id}/sections", response_model=LandSection)
+async def create_land_section(
+    land_id: UUID,
+    section_data: LandSectionCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new section for a land."""
+    # Check if user owns the land or is admin
+    land_check = text("SELECT owner_id FROM lands WHERE land_id = :land_id")
+    land_result = db.execute(land_check, {"land_id": str(land_id)}).fetchone()
+    
+    if not land_result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Land not found"
+        )
+    
+    user_roles = current_user.get("roles", [])
+    if ("administrator" not in user_roles and 
+        str(land_result.owner_id) != current_user["user_id"]):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
         )
     
-    # Update land fields
-    update_data = land_update.dict(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(land, field, value)
+    # Use stored procedure to assign section
+    query = text("""
+        SELECT sp_assign_section(:land_id, :section_definition_id, :section_data) as section_id
+    """)
+    
+    result = db.execute(query, {
+        "land_id": str(land_id),
+        "section_definition_id": str(section_data.section_definition_id),
+        "section_data": section_data.section_data
+    }).fetchone()
     
     db.commit()
-    db.refresh(land)
     
-    return LandResponse(
-        land_id=str(land.land_id),
-        landowner_id=str(land.landowner_id),
-        title=land.title,
-        location_text=land.location_text,
-        coordinates=land.coordinates,
-        area_acres=land.area_acres,
-        land_type=land.land_type,
-        status=land.status,
-        admin_notes=land.admin_notes,
-        energy_key=land.energy_key,
-        capacity_mw=land.capacity_mw,
-        price_per_mwh=land.price_per_mwh,
-        timeline_text=land.timeline_text,
-        contract_term_years=land.contract_term_years,
-        developer_name=land.developer_name,
-        published_at=land.published_at.isoformat() if land.published_at else None,
-        interest_locked_at=land.interest_locked_at.isoformat() if land.interest_locked_at else None,
-        created_at=land.created_at.isoformat(),
-        updated_at=land.updated_at.isoformat()
+    if not result or not result.section_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create section"
+        )
+    
+    # Fetch the created section
+    section_query = text("""
+        SELECT land_section_id, land_id, section_definition_id, section_data, created_at, updated_at
+        FROM land_sections
+        WHERE land_section_id = :section_id
+    """)
+    
+    section_result = db.execute(section_query, {"section_id": result.section_id}).fetchone()
+    
+    return LandSection(
+        land_section_id=section_result.land_section_id,
+        land_id=section_result.land_id,
+        section_definition_id=section_result.section_definition_id,
+        section_data=section_result.section_data,
+        created_at=section_result.created_at,
+        updated_at=section_result.updated_at
     )
 
-@router.post("/{land_id}/submit", response_model=dict)
-async def submit_land_for_review(
-    land_id: str,
-    current_user: User = Depends(get_current_user),
+@router.get("/sections/definitions", response_model=List[SectionDefinition])
+async def get_section_definitions(
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Submit land for admin review (landowner only)"""
-    land = db.query(Land).filter(Land.land_id == land_id).first()
-    if not land:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Land not found"
+    """Get all available section definitions."""
+    query = text("""
+        SELECT section_definition_id, section_name, section_type, is_required, created_at
+        FROM section_definitions
+        ORDER BY section_name
+    """)
+    
+    results = db.execute(query).fetchall()
+    
+    return [
+        SectionDefinition(
+            section_definition_id=row.section_definition_id,
+            section_name=row.section_name,
+            section_type=row.section_type,
+            is_required=row.is_required,
+            created_at=row.created_at
         )
-    
-    # Check if user is the landowner
-    if not is_landowner(db, str(current_user.user_id), land_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the landowner can submit for review"
-        )
-    
-    if land.status != 'draft':
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only draft lands can be submitted"
-        )
-    
-    # Update land status
-    land.status = 'submitted'
-    
-    # Mark sections as submitted if they have data
-    sections = db.query(LandSection).filter(LandSection.land_id == land_id).all()
-    for section in sections:
-        if section.status == 'draft':
-            section.status = 'submitted'
-            section.submitted_at = db.execute('SELECT NOW()').scalar()
-    
-    db.commit()
-    
-    return {"message": "Land submitted for review successfully"}
-
-@router.post("/{land_id}/define-project", response_model=dict)
-async def define_project(
-    land_id: str,
-    project_data: ProjectDefinition,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Define project details (admin only)"""
-    if not is_admin(db, str(current_user.user_id)):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can define project details"
-        )
-    
-    land = db.query(Land).filter(Land.land_id == land_id).first()
-    if not land:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Land not found"
-        )
-    
-    # Update project details
-    land.energy_key = project_data.energy_key
-    land.capacity_mw = project_data.capacity_mw
-    land.price_per_mwh = project_data.price_per_mwh
-    land.timeline_text = project_data.timeline_text
-    land.contract_term_years = project_data.contract_term_years
-    land.developer_name = project_data.developer_name
-    
-    db.commit()
-    
-    return {"message": "Project details defined successfully"}
-
-@router.post("/{land_id}/publish", response_model=dict)
-async def publish_land(
-    land_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Publish land to investors (admin only)"""
-    if not is_admin(db, str(current_user.user_id)):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can publish lands"
-        )
-    
-    land = db.query(Land).filter(Land.land_id == land_id).first()
-    if not land:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Land not found"
-        )
-    
-    if land.status not in ['approved', 'investor_ready']:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Land must be approved before publishing"
-        )
-    
-    # Check required fields
-    required_fields = ['title', 'location_text', 'energy_key', 'capacity_mw', 
-                      'price_per_mwh', 'timeline_text', 'contract_term_years', 'developer_name']
-    
-    for field in required_fields:
-        if not getattr(land, field):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Missing required field: {field}"
-            )
-    
-    # Publish the land
-    land.status = 'published'
-    land.published_at = db.execute('SELECT NOW()').scalar()
-    
-    db.commit()
-    
-    return {"message": "Land published successfully"}
-
-@router.post("/{land_id}/mark-rtb", response_model=dict)
-async def mark_land_rtb(
-    land_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Mark land as Ready to Build (admin only)"""
-    if not is_admin(db, str(current_user.user_id)):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can mark land as RTB"
-        )
-    
-    land = db.query(Land).filter(Land.land_id == land_id).first()
-    if not land:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Land not found"
-        )
-    
-    # Check if all sections are approved
-    pending_sections = db.query(LandSection).filter(
-        LandSection.land_id == land_id,
-        LandSection.status != 'approved'
-    ).count()
-    
-    if pending_sections > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="All sections must be approved before RTB"
-        )
-    
-    # Check if all tasks are completed
-    from models.tasks import Task
-    open_tasks = db.query(Task).filter(
-        Task.land_id == land_id,
-        ~Task.status.in_(['completed', 'rejected', 'on_hold'])
-    ).count()
-    
-    if open_tasks > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="All tasks must be completed before RTB"
-        )
-    
-    # Mark as RTB
-    land.status = 'rtb'
-    db.commit()
-    
-    return {"message": "Land marked as Ready to Build successfully"}
+        for row in results
+    ]

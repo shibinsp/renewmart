@@ -1,30 +1,16 @@
-from .lookup_tables import *
+# Import all ORM models to ensure they are registered with SQLAlchemy
 from .users import User, UserRole
-from .lands import Land, LandSection, Document
+from .lookup_tables import LuRole, LuStatus, LuTaskStatus, LuEnergyType
+from .lands import Land, LandSection, SectionDefinition
+from .documents import Document
 from .tasks import Task, TaskHistory
 from .investors import InvestorInterest
 
 __all__ = [
-    # Lookup tables
-    "LuRole",
-    "LuStatus", 
-    "LuTaskStatus",
-    "LuEnergyType",
-    "SectionDefinition",
-    
-    # User models
-    "User",
-    "UserRole",
-    
-    # Land models
-    "Land",
-    "LandSection",
-    "Document",
-    
-    # Task models
-    "Task",
-    "TaskHistory",
-    
-    # Investor models
-    "InvestorInterest"
+    'User', 'UserRole',
+    'LuRole', 'LuStatus', 'LuTaskStatus', 'LuEnergyType',
+    'Land', 'LandSection', 'SectionDefinition',
+    'Document',
+    'Task', 'TaskHistory',
+    'InvestorInterest'
 ]

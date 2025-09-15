@@ -7,49 +7,49 @@ const RoleSelectionStep = ({ formData, setFormData, errors }) => {
       id: 'landowner',
       title: 'Landowner',
       icon: 'MapPin',
-      description: 'Property owners looking to monetize land through renewable energy projects',
+      description: 'Property owner seeking renewable energy opportunities',
       features: ['Property listing tools', 'Site assessment requests', 'Contract management', 'Revenue tracking']
     },
     {
       id: 'investor',
       title: 'Investor',
       icon: 'TrendingUp',
-      description: 'Institutional and private investors focused on renewable energy assets',
+      description: 'Investment professional focused on renewable energy assets',
       features: ['Deal flow management', 'Due diligence tools', 'Portfolio tracking', 'Financial analysis']
     },
     {
-      id: 'sales_advisor',
+      id: 're_sales_advisor',
       title: 'RE Sales Advisor',
       icon: 'Users',
-      description: 'Sales professionals managing client relationships and deal pipelines',
-      features: ['Lead management', 'Client communication', 'Deal pipeline', 'Commission tracking']
+      description: 'Sales professional managing client relationships',
+      features: ['Market evaluation', 'Investor alignment', 'Land valuation reports', 'Sale contracts']
     },
     {
-      id: 'analyst',
+      id: 're_analyst',
       title: 'RE Analyst',
       icon: 'BarChart3',
-      description: 'Technical and financial analysts conducting feasibility studies',
-      features: ['Market research tools', 'Financial modeling', 'Feasibility studies', 'Data analysis']
+      description: 'Technical and financial analysis specialist',
+      features: ['Feasibility analysis', 'Financial models', 'Grid connectivity', 'Technical surveys']
     },
     {
       id: 'project_manager',
       title: 'Project Manager',
       icon: 'FolderOpen',
-      description: 'Operations professionals overseeing renewable energy project development',
+      description: 'Operations professional overseeing project development',
       features: ['Project tracking', 'Resource management', 'Timeline management', 'Team coordination']
     },
     {
-      id: 'governance_lead',
+      id: 're_governance_lead',
       title: 'RE Governance Lead',
       icon: 'Shield',
-      description: 'Compliance specialists ensuring adherence to industry standards',
-      features: ['Compliance monitoring', 'Audit trails', 'Regulatory reporting', 'Risk assessment']
+      description: 'Compliance and regulatory specialist',
+      features: ['Regulatory compliance', 'Environmental assessments', 'Government approvals', 'Risk assessment']
     },
     {
       id: 'administrator',
       title: 'Administrator',
       icon: 'Settings',
-      description: 'IT and system administrators managing platform operations',
+      description: 'System administrator managing platform operations',
       features: ['User management', 'System configuration', 'Security monitoring', 'Platform analytics']
     }
   ];

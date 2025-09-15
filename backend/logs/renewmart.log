@@ -1,0 +1,52 @@
+2025-09-14 18:22:19 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-14 18:22:19 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-14 18:22:37 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-14 18:22:37 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-14 18:22:38 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-14 18:22:38 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-14 18:22:43 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-14 18:22:43 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-14 18:22:45 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-14 18:22:45 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:238 - RenewMart Server Starting...
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:239 - Environment: development
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:240 - Python version: 3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:241 - Working directory: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend
+2025-09-14 18:22:50 - renewmart.server - WARNING - server.py:85 - Database file not found: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\renewmart.db. Run create_tables.py first.
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:128 - Starting RenewMart server...
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:129 - Server configuration: {'app': 'main:app', 'host': '0.0.0.0', 'port': 8000, 'reload': False, 'log_level': 'debug', 'access_log': True, 'use_colors': True}
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:135 - Server starting on http://0.0.0.0:8000
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:136 - API documentation available at http://0.0.0.0:8000/docs
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:137 - Alternative API docs at http://0.0.0.0:8000/redoc
+2025-09-14 18:22:50 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-14 18:22:50 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-14 18:22:50 - renewmart.server - INFO - server.py:148 - Server shutdown complete
+2025-09-14 18:22:58 - renewmart.server - INFO - server.py:238 - RenewMart Server Starting...
+2025-09-14 18:22:58 - renewmart.server - INFO - server.py:239 - Environment: development
+2025-09-14 18:22:58 - renewmart.server - INFO - server.py:240 - Python version: 3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]
+2025-09-14 18:22:58 - renewmart.server - INFO - server.py:241 - Working directory: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend
+2025-09-14 18:22:58 - renewmart.server - WARNING - server.py:85 - Database file not found: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\renewmart.db. Run create_tables.py first.
+2025-09-14 18:22:58 - renewmart.server - INFO - server.py:128 - Starting RenewMart server...
+2025-09-14 18:22:58 - renewmart.server - INFO - server.py:129 - Server configuration: {'app': 'main:app', 'host': '0.0.0.0', 'port': 8001, 'reload': False, 'log_level': 'debug', 'access_log': True, 'use_colors': True}
+2025-09-14 18:22:58 - renewmart.server - INFO - server.py:135 - Server starting on http://0.0.0.0:8001
+2025-09-14 18:22:58 - renewmart.server - INFO - server.py:136 - API documentation available at http://0.0.0.0:8001/docs
+2025-09-14 18:22:58 - renewmart.server - INFO - server.py:137 - Alternative API docs at http://0.0.0.0:8001/redoc
+2025-09-14 18:22:59 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-14 18:22:59 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-14 18:26:13 - renewmart.server - INFO - server.py:39 - Received signal 2, shutting down gracefully...
+2025-09-14 18:26:13 - renewmart.server - INFO - server.py:148 - Server shutdown complete
+2025-09-14 18:26:22 - renewmart.server - INFO - server.py:238 - RenewMart Server Starting...
+2025-09-14 18:26:22 - renewmart.server - INFO - server.py:239 - Environment: development
+2025-09-14 18:26:22 - renewmart.server - INFO - server.py:240 - Python version: 3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]
+2025-09-14 18:26:22 - renewmart.server - INFO - server.py:241 - Working directory: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend
+2025-09-14 18:26:22 - renewmart.server - WARNING - server.py:85 - Database file not found: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\renewmart.db. Run create_tables.py first.
+2025-09-14 18:26:22 - renewmart.server - INFO - server.py:128 - Starting RenewMart server...
+2025-09-14 18:26:22 - renewmart.server - INFO - server.py:129 - Server configuration: {'app': 'main:app', 'host': '0.0.0.0', 'port': 8000, 'reload': False, 'log_level': 'info', 'access_log': True, 'use_colors': True}
+2025-09-14 18:26:22 - renewmart.server - INFO - server.py:135 - Server starting on http://0.0.0.0:8000
+2025-09-14 18:26:22 - renewmart.server - INFO - server.py:136 - API documentation available at http://0.0.0.0:8000/docs
+2025-09-14 18:26:22 - renewmart.server - INFO - server.py:137 - Alternative API docs at http://0.0.0.0:8000/redoc
+2025-09-14 18:26:23 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-14 18:26:23 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-14 18:26:23 - renewmart.server - INFO - server.py:148 - Server shutdown complete
+2025-09-14 19:10:55 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-14 19:10:55 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs

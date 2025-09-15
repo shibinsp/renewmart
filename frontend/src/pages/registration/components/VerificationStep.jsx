@@ -3,7 +3,7 @@ import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Icon from '../../../components/AppIcon';
 
-const VerificationStep = ({ formData, onComplete }) => {
+const VerificationStep = ({ formData, onComplete, errors }) => {
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -27,16 +27,13 @@ const VerificationStep = ({ formData, onComplete }) => {
 
     setIsVerifying(true);
     
-    // Simulate verification process
-    setTimeout(() => {
-      // Mock verification - accept code "123456"
-      if (verificationCode === '123456') {
-        onComplete();
-      } else {
-        alert('Invalid verification code. Please use "123456" for demo purposes.');
-      }
+    // For demo purposes, accept any 6-digit code or skip verification
+    if (verificationCode.length >= 6 || verificationCode === 'skip') {
+      await onComplete();
+    } else {
+      alert('Please enter a 6-digit verification code or type "skip" to proceed.');
       setIsVerifying(false);
-    }, 2000);
+    }
   };
 
   const handleResendCode = () => {
@@ -57,7 +54,20 @@ const VerificationStep = ({ formData, onComplete }) => {
         <p className="text-muted-foreground">
           We've sent a verification code to <strong>{formData?.email}</strong>
         </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          For demo purposes, enter any 6-digit code or type "skip"
+        </p>
       </div>
+      
+      {errors?.general && (
+        <div className="bg-error/10 border border-error/20 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <Icon name="AlertCircle" size={20} className="text-error" />
+            <p className="text-sm text-error">{errors.general}</p>
+          </div>
+        </div>
+      )}
+      
       {verificationSent && (
         <div className="bg-success/10 border border-success/20 rounded-lg p-4">
           <div className="flex items-center space-x-3">
@@ -83,12 +93,12 @@ const VerificationStep = ({ formData, onComplete }) => {
         <Button
           onClick={handleVerifyCode}
           loading={isVerifying}
-          disabled={verificationCode?.length !== 6}
+          disabled={!verificationCode?.trim()}
           fullWidth
           iconName="Shield"
           iconPosition="left"
         >
-          {isVerifying ? 'Verifying...' : 'Verify Email'}
+          {isVerifying ? 'Creating Account...' : 'Complete Registration'}
         </Button>
 
         <div className="text-center">

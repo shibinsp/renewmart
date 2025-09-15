@@ -17,6 +17,9 @@ python-decouple
 pydantic
 pydantic-settings
 
+# Configuration management
+dynaconf
+
 # CORS and middleware
 fastapi-cors
 

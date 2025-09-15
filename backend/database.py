@@ -1,29 +1,19 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from decouple import config
-import os
-from dotenv import load_dotenv
+from sqlalchemy.orm import sessionmaker, Session
+from config import settings
+from typing import Optional
+from uuid import UUID
 
-# Load environment variables
-load_dotenv()
-
-# Database configuration
-DB_NAME = os.getenv("DB_NAME", "renew")
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "shibin")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-
-# Create database URL
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Get database URL from Dynaconf settings
+DATABASE_URL = settings.DATABASE_URL
 
 # Create SQLAlchemy engine
 engine = create_engine(
     DATABASE_URL,
-    echo=True,  # Set to False in production
-    pool_size=10,
-    max_overflow=20,
+    echo=settings.get('DATABASE_ECHO', False),  # Use settings for echo
+    pool_size=settings.get('DATABASE_POOL_SIZE', 10),
+    max_overflow=settings.get('DATABASE_MAX_OVERFLOW', 20),
     pool_pre_ping=True
 )
 
@@ -40,3 +30,38 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Helper function to get user by email (for auth compatibility)
+def get_user_by_email(db: Session, email: str) -> Optional[dict]:
+    """Get user by email address."""
+    query = text("""
+        SELECT u.user_id, u.email, u.password_hash, u.first_name, u.last_name,
+               u.phone, u.is_active, u.created_at, u.updated_at,
+               COALESCE(array_agg(ur.role_key) FILTER (WHERE ur.role_key IS NOT NULL), '{}') as roles
+        FROM "user" u
+        LEFT JOIN user_roles ur ON u.user_id = ur.user_id
+        WHERE u.email = :email
+        GROUP BY u.user_id, u.email, u.password_hash, u.first_name, u.last_name,
+                 u.phone, u.is_active, u.created_at, u.updated_at
+    """)
+    
+    result = db.execute(query, {"email": email}).fetchone()
+    
+    if not result:
+        return None
+        
+    return {
+        "user_id": result.user_id,
+        "email": result.email,
+        "password_hash": result.password_hash,
+        "first_name": result.first_name,
+        "last_name": result.last_name,
+        "phone": result.phone,
+        "is_active": result.is_active,
+        "created_at": result.created_at,
+        "updated_at": result.updated_at,
+        "roles": result.roles
+    }
+
+# Import User model from schemas for compatibility
+from models.schemas import User

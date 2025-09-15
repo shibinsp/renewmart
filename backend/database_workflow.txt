@@ -1,0 +1,592 @@
+0) Conventions
+
+Use UUID keys (gen_random_uuid() from pgcrypto).
+
+Use lookup tables (instead of hard ENUMs) so you can add states/roles without migrations.
+
+Use status guards (triggers) to enforce: no tasks before submit, publish only when valid, auto-hide on interest, etc.
+
+-- enable extensions
+CREATE EXTENSION IF NOT EXISTS pgcrypto;   -- for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS btree_gin;  -- for GIN + btree combos
+
+1) Lookups (roles, statuses, categories)
+-- roles (seed these; tie to your app RBAC)
+CREATE TABLE lu_roles (
+  role_key TEXT PRIMARY KEY,       -- 'landowner','investor','re_sales_advisor','re_analyst','re_governance_lead','administrator','project_manager'
+  label TEXT NOT NULL
+);
+
+-- generic statuses
+CREATE TABLE lu_status (
+  status_key TEXT PRIMARY KEY,     -- 'draft','submitted','under_review','approved','rejected','investor_ready','published','interest_locked','rtb','complete'
+  scope TEXT NOT NULL              -- 'land','section','task','project','investor_interest'
+);
+
+-- task status
+CREATE TABLE lu_task_status (
+  status_key TEXT PRIMARY KEY      -- 'assigned','in_progress','pending','delayed','completed','rejected','on_hold'
+);
+
+-- energy types and project types
+CREATE TABLE lu_energy_type (
+  energy_key TEXT PRIMARY KEY      -- 'solar','wind','hydroelectric','biomass','geothermal'
+);
+
+
+Seed rows (once):
+
+INSERT INTO lu_roles(role_key,label) VALUES
+('landowner','Landowner'),('investor','Investor'),('re_sales_advisor','RE Sales Advisor'),
+('re_analyst','RE Analyst'),('re_governance_lead','RE Governance Lead'),
+('administrator','Administrator'),('project_manager','Project Manager')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO lu_status(status_key,scope) VALUES
+('draft','land'),('submitted','land'),('under_review','land'),('approved','land'),
+('rejected','land'),('investor_ready','land'),('published','land'),
+('interest_locked','land'),('rtb','land'),('complete','land'),
+('assigned','task'),('in_progress','task'),('pending','task'),('delayed','task'),
+('completed','task'),('rejected','task'),('on_hold','task'),
+('draft','section'),('submitted','section'),('approved','section'),('rejected','section')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO lu_task_status(status_key) VALUES
+('assigned'),('in_progress'),('pending'),('delayed'),('completed'),('rejected'),('on_hold')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO lu_energy_type(energy_key) VALUES
+('solar'),('wind'),('hydroelectric'),('biomass'),('geothermal')
+ON CONFLICT DO NOTHING;
+
+2) Users & RBAC (minimal to focus on workflow)
+CREATE TABLE users (
+  user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  phone TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- user -> many roles (flexible)
+CREATE TABLE user_roles (
+  user_id UUID REFERENCES users(user_id) ON DELETE CASCADE,
+  role_key TEXT REFERENCES lu_roles(role_key),
+  assigned_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY(user_id, role_key)
+);
+
+3) Land, Sections (accordion), Documents
+-- Parent land record
+CREATE TABLE lands (
+  land_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  landowner_id UUID NOT NULL REFERENCES users(user_id),
+  title TEXT NOT NULL,
+  location_text TEXT,                  -- e.g., "Maricopa County, AZ"
+  coordinates JSONB,                   -- {lat:..., lng:...}
+  area_acres NUMERIC(10,2),
+  land_type TEXT,                      -- soil/terrain etc
+  status TEXT NOT NULL DEFAULT 'draft' REFERENCES lu_status(status_key), -- scope='land'
+  admin_notes TEXT,
+  energy_key TEXT REFERENCES lu_energy_type(energy_key), -- decided by admin later
+  capacity_mw NUMERIC(12,2),          -- planned capacity
+  price_per_mwh NUMERIC(12,2),        -- $/MWh when applicable
+  timeline_text TEXT,                  -- "6-12 months"
+  contract_term_years INT,             -- e.g., 20
+  developer_name TEXT,                 -- e.g., "Arizona Solar Partners"
+  published_at TIMESTAMPTZ,           -- set on publish
+  interest_locked_at TIMESTAMPTZ,     -- set on first investor interest
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_lands_owner ON lands(landowner_id);
+CREATE INDEX idx_lands_status ON lands(status);
+CREATE INDEX idx_lands_published ON lands(published_at) WHERE published_at IS NOT NULL;
+
+-- Accordion sections (configurable)
+CREATE TABLE section_definitions (
+  section_key TEXT PRIMARY KEY,        -- 'ownership','site','grid','environment','legal','financial'
+  label TEXT NOT NULL,
+  default_role_reviewer TEXT REFERENCES lu_roles(role_key)  -- default routing role
+);
+
+-- Instance of a section per land
+CREATE TABLE land_sections (
+  land_section_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  land_id UUID NOT NULL REFERENCES lands(land_id) ON DELETE CASCADE,
+  section_key TEXT NOT NULL REFERENCES section_definitions(section_key),
+  status TEXT NOT NULL DEFAULT 'draft' REFERENCES lu_status(status_key),  -- scope='section'
+  assigned_role TEXT REFERENCES lu_roles(role_key),   -- who reviews this section
+  assigned_user UUID REFERENCES users(user_id),
+  data JSONB,                         -- the actual fields captured for the accordion section
+  reviewer_comments TEXT,
+  submitted_at TIMESTAMPTZ,
+  approved_at TIMESTAMPTZ,
+  rejected_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(land_id, section_key)
+);
+
+CREATE INDEX idx_land_sections_land ON land_sections(land_id);
+CREATE INDEX idx_land_sections_status ON land_sections(status);
+
+-- Documents (attach at land or section level)
+CREATE TABLE documents (
+  document_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  land_id UUID REFERENCES lands(land_id) ON DELETE CASCADE,
+  land_section_id UUID REFERENCES land_sections(land_section_id) ON DELETE CASCADE,
+  uploaded_by UUID REFERENCES users(user_id),
+  document_type TEXT,                -- 'ownership_deed','survey','grid_letter','feasibility','PPA','SLA','Env_Clearance'
+  file_name TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  file_size BIGINT,
+  mime_type TEXT,
+  is_draft BOOLEAN DEFAULT TRUE,     -- draft docs visible read-only to admin
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_docs_land ON documents(land_id);
+CREATE INDEX idx_docs_section ON documents(land_section_id);
+
+Suggested default sections + routing
+
+Seed once (you can change later without migrations):
+
+INSERT INTO section_definitions(section_key,label,default_role_reviewer) VALUES
+('ownership','Ownership & Title','re_governance_lead'),
+('site','Site Characteristics','re_analyst'),
+('grid','Grid & Interconnection','re_analyst'),
+('environment','Environmental & Permits','re_governance_lead'),
+('commercial','Commercial / Lease / PPA','re_sales_advisor')
+ON CONFLICT DO NOTHING;
+
+4) Tasks + Full History (analytics-friendly)
+-- Tasks (created only after land is submitted for review)
+CREATE TABLE tasks (
+  task_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  land_id UUID NOT NULL REFERENCES lands(land_id) ON DELETE CASCADE,
+  land_section_id UUID REFERENCES land_sections(land_section_id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  assigned_role TEXT REFERENCES lu_roles(role_key),
+  assigned_to UUID REFERENCES users(user_id),
+  status TEXT NOT NULL DEFAULT 'assigned' REFERENCES lu_task_status(status_key),
+  priority TEXT DEFAULT 'medium',
+  start_date DATE,
+  end_date DATE,
+  created_by UUID REFERENCES users(user_id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_tasks_land ON tasks(land_id);
+CREATE INDEX idx_tasks_assigned_to ON tasks(assigned_to);
+CREATE INDEX idx_tasks_status ON tasks(status);
+
+-- Immutable history rows (append-only)
+CREATE TABLE task_history (
+  history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks(task_id) ON DELETE CASCADE,
+  changed_by UUID REFERENCES users(user_id),
+  from_status TEXT REFERENCES lu_task_status(status_key),
+  to_status TEXT REFERENCES lu_task_status(status_key),
+  start_ts TIMESTAMPTZ DEFAULT now(),   -- when this state began
+  end_ts TIMESTAMPTZ,                   -- when this state ended (closed on next change)
+  note TEXT
+);
+
+CREATE INDEX idx_task_history_task ON task_history(task_id);
+CREATE INDEX idx_task_history_period ON task_history(start_ts, end_ts);
+
+5) Investor flow
+-- Visible only when land.status='published' and not interest_locked
+CREATE TABLE investor_interests (
+  interest_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  investor_id UUID NOT NULL REFERENCES users(user_id),
+  land_id UUID NOT NULL REFERENCES lands(land_id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'submitted',  -- 'submitted','under_review','approved','rejected','withdrawn'
+  comments TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(investor_id, land_id)
+);
+
+CREATE INDEX idx_interest_land ON investor_interests(land_id);
+
+6) Guardrails (Triggers)
+6.1 Updated timestamps
+CREATE OR REPLACE FUNCTION trg_touch_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_touch_lands BEFORE UPDATE ON lands
+FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+
+CREATE TRIGGER trg_touch_land_sections BEFORE UPDATE ON land_sections
+FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+
+CREATE TRIGGER trg_touch_tasks BEFORE UPDATE ON tasks
+FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+
+6.2 Block tasks before land is submitted
+CREATE OR REPLACE FUNCTION check_tasks_only_after_submit()
+RETURNS TRIGGER AS $$
+DECLARE l_status TEXT;
+BEGIN
+  SELECT status INTO l_status FROM lands WHERE land_id = NEW.land_id;
+  IF l_status IN ('draft') THEN
+    RAISE EXCEPTION 'Tasks cannot be created while land is in DRAFT.';
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_tasks_after_submit
+BEFORE INSERT ON tasks
+FOR EACH ROW EXECUTE FUNCTION check_tasks_only_after_submit();
+
+6.3 Auto-close previous task_history state
+CREATE OR REPLACE FUNCTION log_task_history()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP='INSERT' THEN
+    INSERT INTO task_history(task_id, changed_by, from_status, to_status, start_ts, note)
+    VALUES (NEW.task_id, NEW.created_by, NULL, NEW.status, now(), 'task created');
+    RETURN NEW;
+  ELSIF TG_OP='UPDATE' AND NEW.status IS DISTINCT FROM OLD.status THEN
+    UPDATE task_history
+      SET end_ts = now()
+      WHERE task_id = NEW.task_id AND end_ts IS NULL;
+    INSERT INTO task_history(task_id, changed_by, from_status, to_status, start_ts)
+    VALUES (NEW.task_id, NEW.created_by, OLD.status, NEW.status, now());
+    RETURN NEW;
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_task_history_insert
+AFTER INSERT ON tasks FOR EACH ROW EXECUTE FUNCTION log_task_history();
+
+CREATE TRIGGER trg_task_history_update
+AFTER UPDATE OF status ON tasks FOR EACH ROW EXECUTE FUNCTION log_task_history();
+
+7) Stored Procedures (Core Workflow)
+7.1 Create draft land (landowner)
+CREATE OR REPLACE FUNCTION sp_land_create_draft(
+  p_landowner UUID,
+  p_title TEXT,
+  p_location_text TEXT,
+  p_coordinates JSONB,
+  p_area NUMERIC
+) RETURNS UUID AS $$
+DECLARE v_land UUID;
+BEGIN
+  INSERT INTO lands(landowner_id,title,location_text,coordinates,area_acres,status)
+  VALUES (p_landowner,p_title,p_location_text,p_coordinates,p_area,'draft')
+  RETURNING land_id INTO v_land;
+
+  -- bootstrap sections with default routing
+  INSERT INTO land_sections(land_id, section_key, assigned_role, status, data)
+  SELECT v_land, sd.section_key, sd.default_role_reviewer, 'draft', '{}'::jsonb
+  FROM section_definitions sd;
+
+  RETURN v_land;
+END; $$ LANGUAGE plpgsql;
+
+7.2 Landowner submits for admin review (locks draft, admin read/write, triggers work)
+CREATE OR REPLACE FUNCTION sp_land_submit_for_review(
+  p_land UUID,
+  p_landowner UUID
+) RETURNS VOID AS $$
+DECLARE v_owner UUID; v_status TEXT;
+BEGIN
+  SELECT landowner_id, status INTO v_owner, v_status FROM lands WHERE land_id = p_land;
+  IF v_owner IS NULL THEN RAISE EXCEPTION 'Land not found'; END IF;
+  IF v_owner <> p_landowner THEN RAISE EXCEPTION 'Not the owner'; END IF;
+  IF v_status <> 'draft' THEN RAISE EXCEPTION 'Only DRAFT can be submitted'; END IF;
+
+  -- mark sections submitted if user filled them; keep draft allowed but record submit ts
+  UPDATE land_sections
+  SET status = 'submitted', submitted_at = now()
+  WHERE land_id = p_land AND status = 'draft';
+
+  UPDATE lands SET status='submitted' WHERE land_id = p_land;
+END; $$ LANGUAGE plpgsql;
+
+
+Effect: Admin could view drafts earlier, but no task creation was possible; after submission, tasks can be created/assigned.
+
+7.3 Admin assigns section to a reviewer (role/user)
+CREATE OR REPLACE FUNCTION sp_assign_section(
+  p_land_section UUID,
+  p_role TEXT,
+  p_user UUID
+) RETURNS VOID AS $$
+BEGIN
+  UPDATE land_sections
+     SET assigned_role = p_role,
+         assigned_user = p_user
+   WHERE land_section_id = p_land_section;
+END; $$ LANGUAGE plpgsql;
+
+7.4 Admin sets project intent (energy type, capacity, timeline, pricing, developer)
+CREATE OR REPLACE FUNCTION sp_admin_define_project(
+  p_land UUID,
+  p_energy TEXT,
+  p_capacity_mw NUMERIC,
+  p_price_per_mwh NUMERIC,
+  p_timeline TEXT,
+  p_contract_years INT,
+  p_developer TEXT
+) RETURNS VOID AS $$
+BEGIN
+  UPDATE lands
+     SET energy_key = p_energy,
+         capacity_mw = p_capacity_mw,
+         price_per_mwh = p_price_per_mwh,
+         timeline_text = p_timeline,
+         contract_term_years = p_contract_years,
+         developer_name = p_developer
+   WHERE land_id = p_land;
+END; $$ LANGUAGE plpgsql;
+
+7.5 Role users create/update tasks (with dates, status)
+CREATE OR REPLACE FUNCTION sp_task_create(
+  p_land UUID,
+  p_land_section UUID,
+  p_title TEXT,
+  p_desc TEXT,
+  p_assigned_role TEXT,
+  p_assigned_to UUID,
+  p_start DATE,
+  p_end DATE,
+  p_created_by UUID
+) RETURNS UUID AS $$
+DECLARE v_id UUID;
+BEGIN
+  INSERT INTO tasks(land_id, land_section_id, title, description, assigned_role, assigned_to,
+                    status, start_date, end_date, created_by)
+  VALUES (p_land, p_land_section, p_title, p_desc, p_assigned_role, p_assigned_to,
+          'assigned', p_start, p_end, p_created_by)
+  RETURNING task_id INTO v_id;
+  RETURN v_id;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION sp_task_update_status(
+  p_task UUID,
+  p_new_status TEXT,
+  p_user UUID,
+  p_note TEXT DEFAULT NULL
+) RETURNS VOID AS $$
+BEGIN
+  UPDATE tasks SET status = p_new_status, updated_at = now(), created_by = p_user
+  WHERE task_id = p_task;
+
+  -- history trigger will append; add optional note by updating last history row
+  UPDATE task_history SET note = COALESCE(note,'') || CASE WHEN p_note IS NULL THEN '' ELSE E'\n' || p_note END
+  WHERE task_id = p_task AND end_ts IS NULL;
+END; $$ LANGUAGE plpgsql;
+
+7.6 Section approval/rejection (RE roles / Governance)
+CREATE OR REPLACE FUNCTION sp_section_decide(
+  p_land_section UUID,
+  p_decision TEXT,            -- 'approved' | 'rejected'
+  p_reviewer UUID,
+  p_comment TEXT
+) RETURNS VOID AS $$
+DECLARE v_land UUID;
+BEGIN
+  IF p_decision NOT IN ('approved','rejected') THEN RAISE EXCEPTION 'Invalid decision'; END IF;
+
+  UPDATE land_sections
+     SET status = p_decision,
+         reviewer_comments = p_comment,
+         approved_at = CASE WHEN p_decision='approved' THEN now() END,
+         rejected_at = CASE WHEN p_decision='rejected' THEN now() END
+   WHERE land_section_id = p_land_section;
+
+  -- If all sections approved -> land 'under_review' -> 'approved'
+  SELECT land_id INTO v_land FROM land_sections WHERE land_section_id = p_land_section;
+  IF NOT EXISTS (
+      SELECT 1 FROM land_sections WHERE land_id=v_land AND status <> 'approved'
+  ) THEN
+    UPDATE lands SET status='approved' WHERE land_id = v_land AND status IN ('submitted','under_review','approved');
+  ELSE
+    UPDATE lands SET status='under_review' WHERE land_id = v_land AND status IN ('submitted','under_review','approved');
+  END IF;
+END; $$ LANGUAGE plpgsql;
+
+7.7 Publish to Investors (admin button)
+
+Requires: land.status IN ('approved','investor_ready') and key marketing fields present (title/location/energy/capacity/price/timeline/contract/developer).
+
+CREATE OR REPLACE FUNCTION sp_publish_land(p_land UUID, p_admin UUID)
+RETURNS VOID AS $$
+DECLARE ok BOOLEAN;
+BEGIN
+  SELECT
+    (title IS NOT NULL AND location_text IS NOT NULL AND energy_key IS NOT NULL
+     AND capacity_mw IS NOT NULL AND price_per_mwh IS NOT NULL
+     AND timeline_text IS NOT NULL AND contract_term_years IS NOT NULL
+     AND developer_name IS NOT NULL)
+  INTO ok
+  FROM lands WHERE land_id=p_land;
+
+  IF NOT ok THEN RAISE EXCEPTION 'Missing required fields for publish'; END IF;
+
+  UPDATE lands
+     SET status='published', published_at=now()
+   WHERE land_id=p_land AND status IN ('approved','investor_ready');
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Land must be APPROVED/INVESTOR_READY before publishing';
+  END IF;
+END; $$ LANGUAGE plpgsql;
+
+7.8 Investor expresses interest → auto-hide listing
+CREATE OR REPLACE FUNCTION sp_investor_express_interest(
+  p_land UUID,
+  p_investor UUID,
+  p_comments TEXT
+) RETURNS UUID AS $$
+DECLARE v_interest UUID; v_status TEXT;
+BEGIN
+  SELECT status INTO v_status FROM lands WHERE land_id=p_land;
+  IF v_status <> 'published' THEN
+    RAISE EXCEPTION 'Land is not open for new interests';
+  END IF;
+
+  INSERT INTO investor_interests(investor_id, land_id, comments, status)
+  VALUES (p_investor, p_land, p_comments, 'submitted')
+  RETURNING interest_id INTO v_interest;
+
+  -- lock the listing (hide from others)
+  UPDATE lands SET status='interest_locked', interest_locked_at=now() WHERE land_id=p_land;
+
+  RETURN v_interest;
+END; $$ LANGUAGE plpgsql;
+
+7.9 Move to RTB (final gate)
+
+Requires: all sections approved AND no open tasks.
+
+CREATE OR REPLACE FUNCTION sp_land_mark_rtb(p_land UUID, p_admin UUID)
+RETURNS VOID AS $$
+DECLARE pending_sections INT; open_tasks INT;
+BEGIN
+  SELECT count(*) INTO pending_sections
+  FROM land_sections WHERE land_id=p_land AND status <> 'approved';
+
+  IF pending_sections > 0 THEN
+    RAISE EXCEPTION 'All sections must be approved before RTB';
+  END IF;
+
+  SELECT count(*) INTO open_tasks
+  FROM tasks WHERE land_id=p_land AND status NOT IN ('completed','rejected','on_hold');
+
+  IF open_tasks > 0 THEN
+    RAISE EXCEPTION 'All tasks must be completed/reconciled before RTB';
+  END IF;
+
+  UPDATE lands SET status='rtb' WHERE land_id=p_land;
+END; $$ LANGUAGE plpgsql;
+
+8) Minimal “Investor Card” view (for publish)
+
+This aligns to your example:
+
+Title:            Arizona Solar Complex Epsilon
+Location:         Maricopa County, AZ
+Capacity:         150 MW
+Price:            $49.75/MWh
+Timeline:         6-12 months
+Contract:         20 years
+Developer:        Arizona Solar Partners
+
+
+Suggested SQL view feeding the frontend:
+
+CREATE OR REPLACE VIEW vw_investor_listings AS
+SELECT
+  land_id,
+  title,
+  location_text,
+  capacity_mw,
+  price_per_mwh,
+  timeline_text,
+  contract_term_years,
+  developer_name,
+  energy_key
+FROM lands
+WHERE status='published';
+
+
+Once an investor calls sp_investor_express_interest, the land moves to interest_locked and disappears from this view automatically.
+
+9) Visibility rules (frontend/back)
+
+Landowner: full edit while draft; read-only after submit.
+
+Admin: always read; edit routing/definitions/approvals; only “Publish” when checks pass.
+
+RE roles: see only their assigned sections and tasks editable; other tabs read-only.
+
+Investor: sees vw_investor_listings only; hidden after first interest.
+
+(Enforce in API; DB aids with statuses, and interest_locked.)
+
+10) Sample “accordion” section field suggestions (by role)
+
+These will live in land_sections.data as JSON; define UI schemas in your app:
+
+ownership (RE Governance):
+
+owner_name, title_deed_no, encumbrances[], tax_clearance_doc_id
+
+site (RE Analyst):
+
+soil_type, terrain, access_road, flood_risk, area_verified_acres
+
+grid (RE Analyst):
+
+nearest_substation, voltage_kv, distance_km, capacity_available_mva, grid_letter_doc_id
+
+environment (RE Governance):
+
+protected_area, wildlife_sensitivity, env_permit_ids[], eia_doc_id
+
+commercial (RE Sales):
+
+proposed_lease_terms, ppa_counterparty, ppa_tenor_years, tariff_expectation
+
+11) Indexes & Performance
+CREATE INDEX idx_lands_energy ON lands(energy_key);
+CREATE INDEX idx_docs_uploader ON documents(uploaded_by);
+CREATE INDEX idx_sections_assignee ON land_sections(assigned_user);
+CREATE INDEX idx_sections_role ON land_sections(assigned_role);
+CREATE INDEX idx_task_history_open ON task_history(task_id) WHERE end_ts IS NULL;
+
+12) How this satisfies your requirements
+
+Draft save: lands.status='draft', documents.is_draft=TRUE; admin can only view.
+
+Submit for review: sp_land_submit_for_review flips land/sections to submitted; tasks blocked pre-submit via trigger.
+
+Role assignments per section: land_sections.assigned_role/assigned_user, sp_assign_section.
+
+Role tasks with dates/status: tasks + immutable task_history.
+
+Analytics: task_history gives exact time in each state; indexes support BI queries.
+
+Admin “Publish to Investors”: sp_publish_land checks required fields; sets published.
+
+Auto-hide on interest: sp_investor_express_interest → status interest_locked.
+
+RTB: sp_land_mark_rtb enforces all approvals & tasks closed.
