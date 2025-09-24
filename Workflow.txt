@@ -1,0 +1,102 @@
+{
+  "application": "Land Investment Platform",
+  "actors": {
+    "landowner": {
+      "actions": [
+        "Register on the platform",
+        "Upload land details and documents in accordion style sections",
+        "Save documents as Draft (not ready for Admin Review)",
+        "Submit documents for Admin Review"
+      ],
+      "rules": {
+        "draft_mode": "Documents visible to Admin in view-only mode. No action by Admin until submission."
+      }
+    },
+    "admin": {
+      "actions": [
+        "View documents in Draft mode (view only)",
+        "Review documents once submitted",
+        "Assign sections of review work to specific roles",
+        "Define potential land usage (Solar, Wind, Hydroelectric, Biomass, Geothermal)",
+        "Define Capacity (MW) and Implementation Timeline",
+        "Publish land details to investors"
+      ],
+      "roles_assignment": {
+        "re_sales_advisor": {
+          "type_of_work": "Market evaluation and investor alignment",
+          "required_documents": [
+            "Land valuation reports",
+            "Ownership documents",
+            "Proposed sale contract"
+          ]
+        },
+        "re_analyst": {
+          "type_of_work": "Technical and financial feasibility analysis",
+          "required_documents": [
+            "Topographical surveys",
+            "Grid connectivity details",
+            "Financial models"
+          ]
+        },
+        "re_governance_lead": {
+          "type_of_work": "Compliance, regulatory, and local authority validation",
+          "required_documents": [
+            "Zoning approvals",
+            "Environmental impact assessment",
+            "Government NOCs"
+          ]
+        }
+      }
+    },
+    "review_roles": {
+      "re_sales_advisor": {
+        "tasks": [
+          "Start Date",
+          "End Date",
+          "Description",
+          "Status (In Progress, Pending, Delayed, Completed)"
+        ]
+      },
+      "re_analyst": {
+        "tasks": [
+          "Start Date",
+          "End Date",
+          "Description",
+          "Status"
+        ]
+      },
+      "re_governance_lead": {
+        "tasks": [
+          "Start Date",
+          "End Date",
+          "Description",
+          "Status"
+        ]
+      }
+    },
+    "investor": {
+      "actions": [
+        "View Published Land Details",
+        "Express Interest in Land Parcel"
+      ],
+      "rules": {
+        "investor_interest": "If an investor expresses interest in a land parcel, that parcel is hidden from other investors to avoid ambiguity"
+      }
+    }
+  },
+  "workflow": {
+    "task_tracking": "Separate table to track all tasks with status and timelines for analytics / due diligence",
+    "admin_publish": {
+      "minimal_fields_required": {
+        "project_name": "Arizona Solar Complex Epsilon",
+        "location": "Maricopa County, AZ",
+        "capacity": "150 MW",
+        "price": "$49.75/MWh",
+        "timeline": "6-12 months",
+        "contract": "20 years",
+        "partners": "Arizona Solar Partners"
+      }
+    },
+    "final_status": "Once all approvals and details are satisfied, the land status moves to RTB"
+  }
+}

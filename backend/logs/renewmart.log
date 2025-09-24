@@ -50,3 +50,7 @@
 2025-09-14 18:26:23 - renewmart.server - INFO - server.py:148 - Server shutdown complete
 2025-09-14 19:10:55 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
 2025-09-14 19:10:55 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-15 09:26:54 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-15 09:26:54 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs
+2025-09-15 09:27:05 - renewmart.startup - INFO - logs.py:208 - Request logging middleware initialized
+2025-09-15 09:27:05 - renewmart.startup - INFO - logs.py:209 - Log files will be stored in: C:\Users\ShibinShanmughamprem\Desktop\Renewmart\renewmart\backend\logs

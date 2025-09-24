@@ -1,5 +1,1 @@
 node_modules
-__pycache__/
-logs/
-*.db
-Workflow.txt
