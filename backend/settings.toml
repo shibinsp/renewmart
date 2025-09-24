@@ -35,6 +35,13 @@ UPLOAD_DIR = "uploads"
 MAX_FILE_SIZE = 10485760  # 10MB in bytes
 ALLOWED_FILE_TYPES = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"]
 
+# Redis Configuration (for rate limiting and caching)
+REDIS_HOST = "localhost"
+REDIS_PORT = 6379
+REDIS_DB = 0
+REDIS_PASSWORD = ""
+REDIS_URL = "redis://localhost:6379/0"
+
 [development]
 # Development specific settings
 DEBUG = true
@@ -51,6 +58,10 @@ HOST = "0.0.0.0"
 SECRET_KEY = "@env:SECRET_KEY"
 DATABASE_URL = "@env:DATABASE_URL"
 ALLOWED_ORIGINS = ["@env:FRONTEND_URL"]
+REDIS_URL = "@env:REDIS_URL"
+REDIS_HOST = "@env:REDIS_HOST"
+REDIS_PORT = "@env:REDIS_PORT"
+REDIS_PASSWORD = "@env:REDIS_PASSWORD"
 
 [testing]
 # Testing specific settings

@@ -27,7 +27,21 @@ fastapi-cors
 python-dotenv
 typing-extensions
 
+# Database migrations
+alembic
+
+# Rate limiting and caching
+slowapi
+redis
+
+# System monitoring
+psutil
+
+# Monitoring and metrics
+prometheus-client
+
 # Development dependencies
 pytest
 pytest-asyncio
 httpx
+pytest-cov
