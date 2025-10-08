@@ -1,6 +1,6 @@
 [default]
 # Database Configuration
-DATABASE_URL = "postgresql://renewmart_user:renewmart_password@localhost/renewmart_db"
+DATABASE_URL = "postgresql://renewmart_user:renewmart_password@localhost:5432/renewmart_db"
 DATABASE_HOST = "localhost"
 DATABASE_PORT = 5432
 DATABASE_NAME = "renewmart_db"

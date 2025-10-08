@@ -147,3 +147,10 @@
 2025-09-15 09:54:37 - renewmart.access - INFO - logs.py:127 - POST /api/auth/login - 404 - 0.36ms
 2025-09-15 09:54:37 - renewmart.access - INFO - logs.py:127 - GET /api/health/ - 503 - 37.01ms
 2025-09-15 09:54:37 - renewmart.access - INFO - logs.py:127 - GET /api/nonexistent - 404 - 0.24ms
+2025-10-08 00:23:29 - renewmart.access - INFO - logs.py:127 - GET /health - 200 - 0.73ms
+2025-10-08 00:30:01 - renewmart.access - INFO - logs.py:127 - OPTIONS /api/users/login - 200 - 0.46ms
+2025-10-08 00:30:01 - renewmart.access - INFO - logs.py:127 - POST /api/users/login - 401 - 42.18ms
+2025-10-08 09:12:23 - renewmart.access - INFO - logs.py:127 - GET /health - 200 - 0.64ms
+2025-10-08 09:12:43 - renewmart.access - INFO - logs.py:127 - POST /api/users/login - 401 - 35.65ms
+2025-10-08 09:13:37 - renewmart.access - INFO - logs.py:127 - OPTIONS /api/users/login - 200 - 0.22ms
+2025-10-08 09:13:37 - renewmart.access - INFO - logs.py:127 - POST /api/users/login - 401 - 2.56ms

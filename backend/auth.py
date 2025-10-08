@@ -59,11 +59,11 @@ def verify_token(token: str) -> Optional[TokenData]:
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[dict]:
     """Authenticate a user with email and password."""
-    # Get user with roles
+    # Get user with roles (SQLite compatible)
     query = text("""
         SELECT u.user_id, u.email, u.password_hash, u.first_name, u.last_name,
                u.phone, u.is_active, u.created_at, u.updated_at,
-               COALESCE(array_agg(ur.role_key) FILTER (WHERE ur.role_key IS NOT NULL), '{}') as roles
+               GROUP_CONCAT(ur.role_key) as roles
         FROM "user" u
         LEFT JOIN user_roles ur ON u.user_id = ur.user_id
         WHERE u.email = :email AND u.is_active = true
@@ -79,6 +79,11 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[dict]:
     if not verify_password(password, result.password_hash):
         return None
         
+    # Process roles (GROUP_CONCAT returns comma-separated string)
+    roles = []
+    if result.roles:
+        roles = [role.strip() for role in result.roles.split(',') if role.strip()]
+        
     return {
         "user_id": result.user_id,
         "email": result.email,
@@ -88,7 +93,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[dict]:
         "is_active": result.is_active,
         "created_at": result.created_at,
         "updated_at": result.updated_at,
-        "roles": result.roles
+        "roles": roles
     }
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> dict:
